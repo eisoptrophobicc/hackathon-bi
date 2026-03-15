@@ -1,0 +1,19 @@
+{
+  "average views in india": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('IN')",
+  "how are views distributed across regions?": "SELECT region, SUM(views) FROM youtube_videos_staging GROUP BY region",
+  "average views in pakistan": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('PK')",
+  "average views in united states": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('US')",
+  "average views in usa": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('US')",
+  "average views in canada": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('CA')",
+  "which language performs best overall?": "SELECT language, SUM(views) FROM youtube_videos_staging GROUP BY language ORDER BY SUM(views) DESC LIMIT 1",
+  "averagee views": "SELECT AVG(views) FROM youtube_videos_staging",
+  "show views, likes and comments by regions": "SELECT region, SUM(views), SUM(likes), SUM(comments) FROM youtube_videos_staging GROUP BY region",
+  "views by regions": "SELECT region, SUM(views) FROM youtube_videos_staging GROUP BY region",
+  "which region performs the best in terms of view?": "SELECT region, SUM(views) FROM youtube_videos_staging GROUP BY region ORDER BY SUM(views) DESC LIMIT 1",
+  "which region has the best overall engagement?": "SELECT region, SUM(likes), SUM(comments), SUM(shares) FROM youtube_videos_staging GROUP BY region ORDER BY SUM(likes) DESC LIMIT 1",
+  "what is the average views of videos in us?": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('US')",
+  "average view in uk": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('UK')",
+  "average view in united kingdom": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('UK')",
+  "highlight the top performing category": "SELECT category, SUM(views) FROM youtube_videos_staging GROUP BY category ORDER BY SUM(views) DESC LIMIT 1",
+  "average views in japan": "SELECT AVG(views) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('JP')"
+}

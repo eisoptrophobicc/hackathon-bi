@@ -1,0 +1,34 @@
+[
+  {
+    "intent_pattern": {
+      "aggregation": "SUM",
+      "metric": "{metric}",
+      "filters": {},
+      "group_by": "{dimension}"
+    },
+    "sql_template": "SELECT {dimension}, SUM({metric}) FROM youtube_videos_staging GROUP BY {dimension}"
+  },
+  {
+    "intent_pattern": {
+      "aggregation": "AVG",
+      "metric": "{metric}",
+      "filters": {},
+      "group_by": "{dimension}",
+      "order_by": "{metric}",
+      "order": "DESC",
+      "limit": 1
+    },
+    "sql_template": "SELECT {dimension}, AVG({metric}) FROM youtube_videos_staging GROUP BY {dimension} ORDER BY AVG({metric}) DESC LIMIT 1"
+  },
+  {
+    "intent_pattern": {
+      "aggregation": "AVG",
+      "metric": "{metric}",
+      "filters": {
+        "region": "{region}"
+      },
+      "group_by": null
+    },
+    "sql_template": "SELECT AVG({metric}) FROM youtube_videos_staging WHERE LOWER(region) = LOWER('{region}')"
+  }
+]
