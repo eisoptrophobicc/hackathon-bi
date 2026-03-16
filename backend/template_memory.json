@@ -20,5 +20,26 @@
       "order": "DESC"
     },
     "sql_template": "SELECT {dimension}, SUM({metric}) AS sum_{metric} FROM youtube_videos_staging GROUP BY {dimension} ORDER BY SUM({metric}) DESC"
+  },
+  {
+    "intent_pattern": {
+      "aggregation": "COUNT",
+      "metric": "{metric}",
+      "filters": {},
+      "group_by": "{dimension}"
+    },
+    "sql_template": "SELECT {dimension}, COUNT(*) AS count FROM youtube_videos_staging GROUP BY {dimension}"
+  },
+  {
+    "intent_pattern": {
+      "aggregation": "AVG",
+      "metric": "{metric}",
+      "filters": {
+        "region": "{region}",
+        "category": "{category}"
+      },
+      "group_by": null
+    },
+    "sql_template": "SELECT AVG({metric}) AS avg_views FROM youtube_videos_staging WHERE region = '{region}' AND category = '{category}'"
   }
 ]

@@ -1,17 +1,4 @@
 {
-  "how much revenue are we making?": {
-    "intent": {
-      "metrics": [],
-      "aggregation": "",
-      "group_by": [],
-      "filters": [],
-      "order_by": null,
-      "order": null,
-      "limit": null
-    },
-    "reason": "Query cannot be answered with available data",
-    "timestamp": "2026-03-16T16:19:33.738663"
-  },
   "show me the monthly sales revenue for q3 broken down by region and highlight the top-performing product category": {
     "intent": {
       "metrics": [],
@@ -20,9 +7,24 @@
       "filters": [],
       "order_by": null,
       "order": null,
-      "limit": null
+      "limit": null,
+      "calculation": null
     },
     "reason": "Query cannot be answered with available data",
     "timestamp": "2026-03-16T16:21:35.564619"
+  },
+  "how much revenue are we making?": {
+    "intent": {
+      "metrics": [],
+      "aggregation": "",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    },
+    "reason": "Query cannot be answered with available data",
+    "timestamp": "2026-03-16T18:45:07.850692"
   }
 }

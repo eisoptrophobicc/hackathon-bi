@@ -1,6 +1,6 @@
 from run_query import run_query
 
-question = "show me the monthly sales revenue for q3 broken down by region and highlight the top-performing product category"
+question = "Average views in India for Educational Videos"
 
 df = run_query(question)
 

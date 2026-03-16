@@ -133,7 +133,13 @@ def run_query(question):
 
         intent = parse_question(question)
 
-        if not intent or not intent.get("metrics"):
+        if not intent:
+            raise ValueError("Query cannot be answered with available data")
+
+        metrics = intent.get("metrics", [])
+        aggregation = intent.get("aggregation")
+
+        if not metrics and aggregation != "COUNT":
             raise ValueError("Query cannot be answered with available data")
         
         print("INTENT:", intent)

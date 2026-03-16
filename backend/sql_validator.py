@@ -38,8 +38,15 @@ def validate_intent(intent):
 
     # metric validation
     for metric in metrics:
-        if metric not in metric_columns:
-            raise ValueError(f"Invalid metric: {metric}")
+
+        if aggregation == "COUNT":
+            # allow id columns for counting
+            if metric not in metric_columns and metric not in columns:
+                raise ValueError(f"Invalid metric: {metric}")
+
+        else:
+            if metric not in metric_columns:
+                raise ValueError(f"Invalid metric: {metric}")
 
     # aggregation validation
     if aggregation and aggregation not in valid_aggs:

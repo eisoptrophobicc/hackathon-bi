@@ -1,8 +1,4 @@
 def format_value(value):
-    """
-    Safely format SQL values.
-    Numbers stay raw, strings get quotes.
-    """
 
     if isinstance(value, (int, float)):
         return str(value)
@@ -13,9 +9,6 @@ def format_value(value):
     return str(value)
 
 def build_filter(filter_obj):
-    """
-    Convert a filter object into SQL.
-    """
 
     col = filter_obj.get("column")
     op = filter_obj.get("op")
@@ -48,40 +41,29 @@ def build_filter(filter_obj):
     return None
 
 def generate_select(metrics, aggregation, group_by):
-    """
-    Build SELECT clause.
-    """
 
     select_parts = []
 
-    # group columns first
     for g in group_by:
         select_parts.append(g)
 
-    # aggregated metrics
     if aggregation and metrics:
         for m in metrics:
             alias = f"{aggregation.lower()}_{m}"
             select_parts.append(f"{aggregation}({m}) AS {alias}")
 
-    # COUNT(*) case
     elif aggregation == "COUNT" and not metrics:
         select_parts.append("COUNT(*) AS count")
 
-    # raw metrics
     elif metrics:
         select_parts.extend(metrics)
 
-    # fallback
     else:
         select_parts.append("*")
 
     return "SELECT " + ", ".join(select_parts)
 
 def generate_where(filters):
-    """
-    Build WHERE clause.
-    """
 
     if not filters:
         return ""
@@ -101,9 +83,6 @@ def generate_where(filters):
     return "WHERE " + " AND ".join(clauses)
 
 def generate_group_by(group_by):
-    """
-    Build GROUP BY clause.
-    """
 
     if not group_by:
         return ""
@@ -111,9 +90,6 @@ def generate_group_by(group_by):
     return "GROUP BY " + ", ".join(group_by)
 
 def generate_order_by(order_by, order, aggregation, metrics):
-    """
-    Build ORDER BY clause.
-    """
 
     if not order_by:
         return ""
@@ -126,19 +102,111 @@ def generate_order_by(order_by, order, aggregation, metrics):
     return f"ORDER BY {order_by} {order}"
 
 def generate_limit(limit):
-    """
-    Build LIMIT clause.
-    """
 
     if limit is None:
         return ""
 
     return f"LIMIT {limit}"
 
+def generate_percent_query(plan, table_name):
+
+    metrics = plan.get("metrics", [])
+    aggregation = plan.get("aggregation")
+    group_by = plan.get("group_by", [])
+    filters = plan.get("filters", [])
+    order_by = plan.get("order_by")
+    order = plan.get("order") or "DESC"
+    limit = plan.get("limit")
+
+    where_clause = generate_where(filters)
+
+    if metrics:
+        metric = metrics[0]
+        base_metric = f"{aggregation}({metric})"
+    else:
+        base_metric = "COUNT(*)"
+
+    select_cols = ", ".join(group_by)
+
+    order_clause = ""
+    if order_by == "percent":
+        order_clause = f"ORDER BY percent {order}"
+    elif order_by:
+        order_clause = f"ORDER BY {order_by} {order}"
+
+    limit_clause = ""
+    if limit:
+        limit_clause = f"LIMIT {limit}"
+
+    sql = f"""
+    SELECT
+        {select_cols},
+        {base_metric} * 100.0 / SUM({base_metric}) OVER() AS percent
+    FROM {table_name}
+    {where_clause}
+    GROUP BY {select_cols}
+    {order_clause}
+    {limit_clause}
+    """
+
+    return " ".join(sql.split())
+
+def generate_ratio_query(plan, table_name):
+
+    aggregation = plan.get("aggregation") or "SUM"
+    group_by = plan.get("group_by", [])
+    filters = plan.get("filters", [])
+    calc = plan.get("calculation")
+
+    numerator = calc.get("numerator")
+    denominator = calc.get("denominator")
+
+    where_clause = generate_where(filters)
+
+    num_sql = f"{aggregation}({numerator})"
+
+    if denominator == "COUNT":
+        den_sql = "COUNT(*)"
+    else:
+        den_sql = f"{aggregation}({denominator})"
+
+    select_parts = []
+
+    for g in group_by:
+        select_parts.append(g)
+
+    select_parts.append(
+        f"{num_sql} * 1.0 / NULLIF({den_sql},0) AS ratio"
+    )
+
+    select_clause = "SELECT " + ", ".join(select_parts)
+
+    group_clause = ""
+    if group_by:
+        group_clause = "GROUP BY " + ", ".join(group_by)
+
+    sql = f"""
+    {select_clause}
+    FROM {table_name}
+    {where_clause}
+    {group_clause}
+    """
+
+    return " ".join(sql.split())
+
 def generate_sql(plan, table_name="youtube_videos_staging"):
-    """
-    Convert query plan → SQL query.
-    """
+
+    calc = plan.get("calculation")
+
+    if calc:
+
+        calc_type = calc.get("type")
+
+        if calc_type == "PERCENT_OF_TOTAL":
+            return generate_percent_query(plan, table_name)
+
+        if calc_type == "RATIO":
+            return generate_ratio_query(plan, table_name)
 
     metrics = plan.get("metrics", [])
     aggregation = plan.get("aggregation")

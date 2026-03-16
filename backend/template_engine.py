@@ -7,7 +7,6 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 TEMPLATE_FILE = BASE_DIR / "backend" / "template_memory.json"
 
 
-# LOAD TEMPLATE MEMORY
 def load_templates():
 
     if not TEMPLATE_FILE.exists():
@@ -19,7 +18,6 @@ def load_templates():
         return json.load(f)
 
 
-# NORMALIZE INTENT (improves template matching)
 def normalize_intent(intent):
 
     normalized = intent.copy()
@@ -34,7 +32,6 @@ def normalize_intent(intent):
     return normalized
 
 
-# VALIDATE FILTER VALUES
 def validate_filter_values(filters):
 
     schema = load_schema()
@@ -55,14 +52,19 @@ def validate_filter_values(filters):
 
         valid_values = categorical_examples[column]
 
-        if value not in valid_values:
-            print(f"INVALID FILTER VALUE: {column} = {value}")
-            return False
+        if isinstance(value, list):
+            for v in value:
+                if v not in valid_values:
+                    print(f"INVALID FILTER VALUE: {column} = {v}")
+                    return False
+        else:
+            if value not in valid_values:
+                print(f"INVALID FILTER VALUE: {column} = {value}")
+                return False
 
     return True
 
 
-# BUILD TEMPLATE PATTERN
 def build_pattern(intent):
 
     pattern = {
@@ -86,7 +88,6 @@ def build_pattern(intent):
     return pattern
 
 
-# MATCH TEMPLATE PATTERN
 def match_pattern(intent, pattern):
 
     if intent.get("aggregation") != pattern.get("aggregation"):
@@ -120,10 +121,11 @@ def match_pattern(intent, pattern):
     return True
 
 
-# FIND TEMPLATE
 def find_template(intent):
 
-    # BYPASS multi-metric queries
+    if intent.get("calculation"):
+        return None
+
     if len(intent.get("metrics", [])) > 1:
         return None
 
@@ -146,13 +148,15 @@ def find_template(intent):
     return None
 
 
-# GENERATE SQL FROM TEMPLATE
 def generate_sql_from_pattern(template, intent):
 
     metrics = intent.get("metrics", [])
     agg = intent.get("aggregation")
 
-    metric_sql = ", ".join([f"{agg}({m})" for m in metrics])
+    if metrics:
+        metric_sql = ", ".join([f"{agg}({m})" for m in metrics])
+    else:
+        metric_sql = "COUNT(*)"
 
     variables = {}
 
@@ -164,31 +168,24 @@ def generate_sql_from_pattern(template, intent):
 
     sql = template["sql_template"]
 
-    # replace aggregated metric placeholder
     sql = sql.replace(f"{agg}({{metric}})", metric_sql)
 
-    # replace metric placeholder
     if metrics:
         sql = sql.replace("{metric}", metrics[0])
 
-    # replace dimension placeholder
     if "dimension" in variables:
         sql = sql.replace("{dimension}", variables["dimension"])
 
-    # replace filter placeholders
     for key, value in variables.items():
         sql = sql.replace("{" + key + "}", str(value))
 
-    # ORDER BY
     if intent.get("order") and intent.get("order_by") and "ORDER BY" not in sql.upper():
-        metric_for_order = metrics[0]
+        metric_for_order = metrics[0] if metrics else "*"
         sql += f" ORDER BY {agg}({metric_for_order}) {intent['order']}"
 
-    # LIMIT
     if intent.get("limit"):
         sql += f" LIMIT {intent['limit']}"
 
-    # detect unresolved placeholders safely
     if re.search(r"\{.+?\}", sql):
         print("BROKEN TEMPLATE:", sql)
         raise ValueError("Unresolved template variables")
@@ -196,8 +193,10 @@ def generate_sql_from_pattern(template, intent):
     return sql
 
 
-# STORE TEMPLATE
 def store_template(intent, sql):
+
+    if intent.get("calculation"):
+        return
 
     if len(intent.get("metrics", [])) > 1:
         return

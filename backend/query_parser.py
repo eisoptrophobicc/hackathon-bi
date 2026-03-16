@@ -44,7 +44,6 @@ def clean_json(text):
 
     text = text.strip()
 
-    # remove markdown blocks
     text = re.sub(r"```[a-zA-Z]*", "", text)
 
     start = text.find("{")
@@ -79,7 +78,6 @@ def clean_json(text):
 
 def validate_plan(plan, metrics, dimensions, datetimes):
 
-    # ensure structure always exists
     plan.setdefault("metrics", [])
     plan.setdefault("aggregation", "")
     plan.setdefault("group_by", [])
@@ -87,22 +85,20 @@ def validate_plan(plan, metrics, dimensions, datetimes):
     plan.setdefault("order_by", None)
     plan.setdefault("order", None)
     plan.setdefault("limit", None)
+    plan.setdefault("calculation", None)
 
     valid_columns = set(metrics + dimensions + datetimes)
 
-    # metrics must be valid metric columns
     plan["metrics"] = [
         m for m in plan["metrics"]
         if m in metrics
     ]
 
-    # group_by must be dimensions
     plan["group_by"] = [
         g for g in plan["group_by"]
         if g in dimensions
     ]
 
-    # validate filters
     valid_filters = []
 
     for f in plan["filters"]:
@@ -131,25 +127,61 @@ def validate_plan(plan, metrics, dimensions, datetimes):
 
     plan["filters"] = valid_filters
 
-    # order_by must be valid column
     if plan["order_by"] not in valid_columns:
         plan["order_by"] = None
         plan["order"] = None
 
-    # normalize order
     if plan["order"] not in ["ASC", "DESC"]:
         plan["order"] = None
 
-    # limit must be integer
     if plan["limit"] is not None:
         try:
             plan["limit"] = int(plan["limit"])
         except:
             plan["limit"] = None
 
-    # aggregation fallback
     if plan["group_by"] and not plan["aggregation"]:
         plan["aggregation"] = "SUM"
+
+    calc = plan.get("calculation")
+
+    if calc:
+
+        if not isinstance(calc, dict):
+            plan["calculation"] = None
+            return plan
+
+        calc_type = calc.get("type")
+
+        if calc_type not in ["PERCENT_OF_TOTAL", "RATIO"]:
+            plan["calculation"] = None
+            return plan
+
+        if calc_type == "PERCENT_OF_TOTAL":
+
+            if not plan["group_by"]:
+                plan["calculation"] = None
+
+        if calc_type == "RATIO":
+
+            numerator = calc.get("numerator")
+            denominator = calc.get("denominator")
+
+            if numerator not in metrics:
+                plan["calculation"] = None
+
+            if denominator not in metrics and denominator != "COUNT":
+                plan["calculation"] = None
+
+            if len(plan["metrics"]) > 1:
+                pass
+            else:
+                plan["metrics"] = [numerator]
+
+    if len(plan["metrics"]) > 1:
+
+        if not plan["calculation"] or plan["calculation"]["type"] != "RATIO":
+            plan["metrics"] = plan["metrics"][:1]
 
     return plan
 
@@ -157,11 +189,13 @@ def build_prompt(question, schema):
 
     metrics, dimensions, datetimes = extract_roles(schema)
 
-    # lightweight schema representation (saves tokens)
     role_map = {
-        col: meta["role"]
-        for col, meta in schema["columns"].items()
-    }
+                    col: {
+                        "role": meta["role"],
+                        "examples": meta.get("examples", [])
+                    }
+                    for col, meta in schema["columns"].items()
+                }
 
     prompt = f"""
 You are an analytics query planner.
@@ -176,8 +210,6 @@ Columns with roles and example values:
 
 {json.dumps(role_map)}
 
-------------------------------------------------
-
 STRICT RULES
 
 1. You may ONLY use columns listed in the schema.
@@ -186,8 +218,6 @@ STRICT RULES
 4. Filter values must come from the column examples when available.
 5. If a value cannot reasonably map to any example value, do NOT create that filter.
 6. If the question refers to concepts not represented in the schema, return an empty plan.
-
-------------------------------------------------
 
 COLUMN ROLES
 
@@ -204,8 +234,6 @@ datetime columns
 id columns
 - unique identifiers
 - never used as metrics or grouping columns
-
-------------------------------------------------
 
 DERIVED METRIC LOGIC
 
@@ -225,11 +253,70 @@ Rules:
 - Never invent new columns.
 - If the concept cannot be derived, return an empty plan.
 
-------------------------------------------------
+VALUE NORMALIZATION RULE
+
+If a column contains example values in the schema, those examples represent the exact values stored in the database.
+
+When generating filter values:
+
+1. Look at the example values for the column.
+2. Determine which example corresponds to the user's meaning.
+3. Copy that example value exactly.
+
+Do not rewrite, modify, pluralize, or paraphrase example values.
+Only use values that appear exactly in the example list.
+
+FILTER VALUE CONSTRAINT
+
+If a column includes example values in the schema, those examples represent the ONLY valid values that exist in the database.
+
+When generating a filter for such a column:
+
+- MAKE SURE TO LOOK AT THE COLUMN EXAMPLES.
+- The filter value MUST be exactly like one of the example values.
+- Do not output natural language variants.
+- Do not output synonyms.
+- Do not output full names if the examples use codes.
+
+You MUST select the closest matching value from the example list.
+
+CALCULATION TYPES
+
+PERCENT_OF_TOTAL
+
+Triggered by words:
+percentage
+percent
+%
+
+Requires grouping.
+
+RATIO
+
+Triggered by patterns:
+per
+ratio
+rate
+
+Example:
+
+likes per view
+
+Output:
+
+"calculation": {{
+"type": "RATIO",
+"numerator": "likes",
+"denominator": "views"
+}}
+
+If denominator refers to rows (example: comments per video)
+
+use:
+
+"denominator": "COUNT"
 
 MAPPING LOGIC
-
-Translate user intent using these mappings.
 
 Aggregation
 
@@ -254,8 +341,6 @@ broken down by language
 
 → add the dimension column to group_by.
 
-------------------------------------------------
-
 TIME FILTERS
 
 If the user refers to time (year, month, ranges):
@@ -265,10 +350,6 @@ Use a column with role "datetime".
 Examples:
 
 {{"column":"<datetime_column>","op":"BETWEEN","value":["YYYY-MM-DD","YYYY-MM-DD"]}}
-
-Do not assume a specific datetime column name.
-
-------------------------------------------------
 
 FILTER STRUCTURE
 
@@ -287,14 +368,6 @@ IN
 BETWEEN  
 LIKE  
 
-Examples:
-
-{{"column":"region","op":"=","value":"US"}}
-
-{{"column":"views","op":">","value":1000}}
-
-------------------------------------------------
-
 DEFAULT BEHAVIOR
 
 If grouping exists but aggregation missing → use SUM.
@@ -302,8 +375,6 @@ If grouping exists but aggregation missing → use SUM.
 If ranking is requested and multiple metrics exist → order by the first metric.
 
 Never produce LIMIT without ORDER BY.
-
-------------------------------------------------
 
 INVALID OR VAGUE QUESTIONS
 
@@ -322,10 +393,9 @@ return an empty plan:
 "filters": [],
 "order_by": null,
 "order": null,
-"limit": null
+"limit": null,
+"calculation": null
 }}
-
-------------------------------------------------
 
 OUTPUT FORMAT
 
@@ -340,12 +410,11 @@ Structure:
 "filters": [],
 "order_by": null,
 "order": null,
-"limit": null
+"limit": null,
+"calculation": null
 }}
 
 Do not include explanations.
-
-------------------------------------------------
 
 USER QUESTION:
 
@@ -364,7 +433,7 @@ def parse_question(question):
         model="gemini-2.5-flash-lite",
         contents=prompt
     )
-    
+
     print("RAW:", response.text)
     plan = clean_json(response.text)
 
