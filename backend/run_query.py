@@ -8,11 +8,13 @@ from query_executor import execute_query
 from template_engine import find_template, store_template
 from chart_selector import detect_chart
 from insight_engine import generate_insight
+from followup_engine import generate_followup_intent
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 CACHE_FILE = BASE_DIR / "backend" / "question_cache.json"
 BAD_CACHE = BASE_DIR / "backend" / "bad_cache.json"
 
+previous_intent = None
 
 # BAD QUESTION CACHE
 def load_bad_cache():
@@ -64,72 +66,102 @@ def store_question_cache(question, sql, intent=None):
     with open(CACHE_FILE, "w") as f:
         json.dump(cache, f, indent=2)
 
+def merge_intents(previous, new):
+
+    merged = previous.copy()
+
+    for k, v in new.items():
+
+        if v in (None, "", [], {}):
+            continue
+
+        if k == "filters":
+            merged["filters"] = v
+        else:
+            merged[k] = v
+
+    return merged
 
 # MAIN QUERY PIPELINE
-def run_query(question):
+def run_query(question, mode = "new"):
+
+    global previous_intent
+    intent = None
 
     question = question.lower().strip()
 
     # BAD QUESTION CACHE
-    bad_cache = load_bad_cache()
+    if mode == "new":
 
-    if question in bad_cache:
+        bad_cache = load_bad_cache()
 
-        print("SOURCE: BAD CACHE")
+        if question in bad_cache:
 
-        return {
-            "status": "error",
-            "type": "bad_question",
-            "reason": bad_cache[question]
-        }
-
-
-    # QUESTION CACHE
-    cache = load_question_cache()
-
-    if question in cache:
-
-        print("SOURCE: QUESTION CACHE")
-
-        try:
-
-            cache_entry = cache[question]
-
-            sql = cache_entry["sql"]
-            intent = cache_entry["intent"]
-
-            df = execute_query(sql)
-            
-            if df.empty:
-                return {"status": "no_data"}
-            
-            data = df.to_dict(orient="records")
-
-            chart = detect_chart(data)
-
-            insight = generate_insight(intent, data)
-
-            return {
-                "status": "success",
-                "data": data,
-                "sql": sql,
-                "chart": chart,
-                "insight": insight
-            }
-
-        except Exception as e:
+            print("SOURCE: BAD CACHE")
 
             return {
                 "status": "error",
-                "type": "execution_error",
-                "message": str(e)
+                "type": "bad_question",
+                "reason": bad_cache[question]
             }
+
+    # QUESTION CACHE
+    if mode == "new":
+
+        cache = load_question_cache()
+
+        if question in cache:
+
+            print("SOURCE: QUESTION CACHE")
+
+            try:
+
+                cache_entry = cache[question]
+
+                sql = cache_entry["sql"]
+                intent = cache_entry["intent"]
+
+                df = execute_query(sql)
+                
+                previous_intent = intent
+
+                if df.empty:
+                    return {"status": "no_data"}
+                
+                data = df.to_dict(orient="records")
+
+                chart = detect_chart(data)
+
+                insight = generate_insight(intent, data)
+
+                return {
+                    "status": "success",
+                    "data": data,
+                    "sql": sql,
+                    "chart": chart,
+                    "insight": insight
+                }
+
+            except Exception as e:
+
+                return {
+                    "status": "error",
+                    "type": "execution_error",
+                    "message": str(e)
+                }
 
     # MAIN PIPELINE
     try:
 
         # LLM → INTENT
-        intent = parse_question(question)
+        if mode == "continue" and previous_intent:
+
+            followup_intent = generate_followup_intent(question, previous_intent)
+            intent = merge_intents(previous_intent, followup_intent)
+            print("MERGED:", intent)
+
+        else:
+            intent = parse_question(question)
 
         if not intent:
             raise ValueError("Query cannot be answered with available data")
@@ -147,26 +179,31 @@ def run_query(question):
         print("INTENT VALIDATED")
 
         # TEMPLATE ENGINE
-        sql = find_template(intent)
+        if mode == "new":
 
+            sql = find_template(intent)
 
-        print("SQL:", sql)
+            print("SQL:", sql)
 
-        if sql:
+            if sql:
 
-            print("SOURCE: TEMPLATE CACHE")
+                print("SOURCE: TEMPLATE CACHE")
+
+            else:
+
+                print("SOURCE: LLM SQL GENERATOR")
+
+                sql = generate_sql(intent)
+
+                store_template(intent, sql)
 
         else:
 
-            print("SOURCE: LLM SQL GENERATOR")
-
+            print("SOURCE: FOLLOWUP SQL GENERATOR")
             sql = generate_sql(intent)
-
-            store_template(intent, sql)
 
         print("SQL GENERATED:", sql)
 
-       
         # EXECUTE SQL
         df = execute_query(sql)
 
@@ -176,13 +213,17 @@ def run_query(question):
             return {"status": "no_data"}
 
         # STORE SUCCESS CACHE
-        store_question_cache(question, sql, intent)
+        if mode == "new":
+
+            store_question_cache(question, sql, intent)
         
         data = df.to_dict(orient="records")
 
         chart = detect_chart(data)
 
         insight = generate_insight(intent, data)
+
+        previous_intent = intent
 
         return {
             "status": "success",

@@ -102,5 +102,76 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "if i had to focus on views what sort of videos should i make?": {
+    "sql": "SELECT category, AVG(views) AS avg_views FROM youtube_videos_staging GROUP BY category ORDER BY AVG(views) DESC",
+    "intent": {
+      "metrics": [
+        "views"
+      ],
+      "aggregation": "AVG",
+      "group_by": [
+        "category"
+      ],
+      "filters": [],
+      "order_by": "views",
+      "order": "DESC",
+      "limit": null,
+      "calculation": null
+    }
+  },
+  "what's the ratio of likes to views?": {
+    "sql": "SELECT SUM(likes) * 1.0 / NULLIF(SUM(views),0) AS ratio FROM youtube_videos_staging",
+    "intent": {
+      "metrics": [
+        "likes",
+        "views"
+      ],
+      "aggregation": "",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": {
+        "type": "RATIO",
+        "numerator": "likes",
+        "denominator": "views"
+      }
+    }
+  },
+  "average views by region": {
+    "sql": "SELECT region, AVG(views) AS avg_views FROM youtube_videos_staging GROUP BY region",
+    "intent": {
+      "metrics": [
+        "views"
+      ],
+      "aggregation": "AVG",
+      "group_by": [
+        "region"
+      ],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
+  },
+  "total likes by category": {
+    "sql": "SELECT category, SUM(likes) AS sum_likes FROM youtube_videos_staging GROUP BY category",
+    "intent": {
+      "metrics": [
+        "likes"
+      ],
+      "aggregation": "SUM",
+      "group_by": [
+        "category"
+      ],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
   }
 }

@@ -298,23 +298,33 @@ per
 ratio
 rate
 
-Example:
+When a user expresses a metric per another metric, create a ratio calculation.
 
-likes per view
+Rules:
 
-Output:
+1. The numerator must be a metric column.
+2. The denominator must be either:
+   - another metric column, OR
+   - COUNT if the user refers to rows or entities.
+
+Examples of row-based phrases include:
+
+per item
+per record
+per entry
+per row
+
+In such cases use:
+
+"denominator": "COUNT"
+
+Output format:
 
 "calculation": {{
 "type": "RATIO",
-"numerator": "likes",
-"denominator": "views"
+"numerator": "metric",
+"denominator": "metric" or "COUNT"
 }}
-
-If denominator refers to rows (example: comments per video)
-
-use:
-
-"denominator": "COUNT"
 
 MAPPING LOGIC
 
