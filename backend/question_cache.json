@@ -269,5 +269,22 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "if i wanted to focus on views what kinds of videos should i make?": {
+    "sql": "SELECT category, SUM(views) AS sum_views FROM youtube_videos_staging GROUP BY category ORDER BY SUM(views) DESC",
+    "intent": {
+      "metrics": [
+        "views"
+      ],
+      "aggregation": "SUM",
+      "group_by": [
+        "category"
+      ],
+      "filters": [],
+      "order_by": "views",
+      "order": "DESC",
+      "limit": null,
+      "calculation": null
+    }
   }
 }

@@ -138,4 +138,5 @@ def build_schema():
     print("Schema memory built.")
     print(json.dumps(schema, indent=2))
 
-build_schema()
+if __name__ == "__main__":
+    build_schema()
