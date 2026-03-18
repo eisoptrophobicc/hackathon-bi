@@ -153,12 +153,12 @@ def generate_sql_from_pattern(template, intent):
     metrics = intent.get("metrics", [])
     agg = intent.get("aggregation")
 
-    if metrics:
-        metric_sql = ", ".join([f"{agg}({m})" for m in metrics])
-    else:
-        metric_sql = "COUNT(*)"
+    metric = metrics[0] if metrics else None
 
     variables = {}
+
+    if metric:
+        variables["metric"] = metric
 
     if intent.get("group_by"):
         variables["dimension"] = intent["group_by"][0]
@@ -168,24 +168,35 @@ def generate_sql_from_pattern(template, intent):
 
     sql = template["sql_template"]
 
-    sql = sql.replace(f"{agg}({{metric}})", metric_sql)
-
-    if metrics:
-        sql = sql.replace("{metric}", metrics[0])
-
-    if "dimension" in variables:
-        sql = sql.replace("{dimension}", variables["dimension"])
-
+    # Replace placeholders safely
     for key, value in variables.items():
-        sql = sql.replace("{" + key + "}", str(value))
+        sql = sql.replace(f"{{{key}}}", str(value))
 
+    # --- FIX ALIAS AUTOMATICALLY ---
+    if metric and agg:
+        alias = f"{agg.lower()}_{metric}"
+
+        sql = re.sub(
+            rf"{agg}\({metric}\)\s+AS\s+\w+",
+            f"{agg}({metric}) AS {alias}",
+            sql,
+            flags=re.IGNORECASE
+        )
+
+    # Handle COUNT case
+    if not metric and "{metric}" in sql:
+        sql = sql.replace("{metric}", "*")
+
+    # ORDER BY fallback if template doesn't include it
     if intent.get("order") and intent.get("order_by") and "ORDER BY" not in sql.upper():
-        metric_for_order = metrics[0] if metrics else "*"
+        metric_for_order = metric if metric else "*"
         sql += f" ORDER BY {agg}({metric_for_order}) {intent['order']}"
 
+    # LIMIT fallback
     if intent.get("limit"):
         sql += f" LIMIT {intent['limit']}"
 
+    # Safety check
     if re.search(r"\{.+?\}", sql):
         print("BROKEN TEMPLATE:", sql)
         raise ValueError("Unresolved template variables")
@@ -223,6 +234,15 @@ def store_template(intent, sql):
         sql_template = sql_template.replace(
             f"{agg}({m})",
             f"{agg}({{metric}})"
+        )
+
+    # Replace alias with dynamic alias
+    if agg and metrics:
+        sql_template = re.sub(
+            rf"{agg}\(\{{metric\}}\)\s+AS\s+\w+",
+            f"{agg}({{metric}}) AS {agg.lower()}_{{metric}}",
+            sql_template,
+            flags=re.IGNORECASE
         )
 
     if intent.get("group_by"):

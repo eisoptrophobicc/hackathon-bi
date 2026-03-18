@@ -286,5 +286,22 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "sentiment by region": {
+    "sql": "SELECT region, AVG(sentiment_score) AS avg_sentiment_score FROM youtube_videos_staging GROUP BY region",
+    "intent": {
+      "metrics": [
+        "sentiment_score"
+      ],
+      "aggregation": "AVG",
+      "group_by": [
+        "region"
+      ],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
   }
 }

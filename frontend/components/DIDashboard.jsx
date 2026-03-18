@@ -2126,7 +2126,7 @@ function InputBar({
               fontFamily:"JetBrains Mono,monospace"
             }}>
               {columnCount
-                ? `Dataset connected · ${columnCount} cols`
+                ? `data pipeline active`
                 : "No database connected"}
             </span>
 
@@ -2500,7 +2500,7 @@ function EmptyState({onPrompt}){
         <p style={{margin:"0 0 6px",fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>Ask anything about your dataset — views, sentiment, monetization, regional performance, and more.</p>
         <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,background:T.aBg,border:`1px solid ${T.a0}33`,marginTop:4}}>
           <div style={{width:5,height:5,borderRadius:"50%",background:T.green}}/>
-          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>youtube_videos · 12 columns loaded</span>
+          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>Dataset Connected · Analytics Engine Ready</span>
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,width:"100%",maxWidth:720}}>
