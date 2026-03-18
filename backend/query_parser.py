@@ -1,16 +1,13 @@
 import json
-import os
 from pathlib import Path
 from dotenv import load_dotenv
-from google import genai
 import re
+from genai_client import get_genai_client
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = BASE_DIR / "backend" / "schema_memory.json"
-
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def load_schema():
     with open(SCHEMA_PATH, "r") as f:
@@ -433,6 +430,7 @@ USER QUESTION:
     return prompt, metrics, dimensions, datetimes
 
 def parse_question(question):
+    client = get_genai_client()
 
     schema = load_schema()
 

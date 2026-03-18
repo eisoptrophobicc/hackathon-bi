@@ -60,5 +60,19 @@
     },
     "reason": "Query cannot be answered with available data",
     "timestamp": "2026-03-17T13:54:52.438976+00:00"
+  },
+  "what colour is the sky?": {
+    "intent": {
+      "metrics": [],
+      "aggregation": "",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    },
+    "reason": "Query cannot be answered with available data",
+    "timestamp": "2026-03-18T20:24:54.041970+00:00"
   }
 }
