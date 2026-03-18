@@ -1,15 +1,12 @@
 import json
-import os
 import re
 from pathlib import Path
 from dotenv import load_dotenv
-from google import genai
 
 from query_parser import load_schema, extract_roles, clean_json, validate_plan
+from genai_client import get_genai_client
 
 load_dotenv()
-
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
@@ -136,6 +133,7 @@ FOLLOW-UP QUESTION:
 
 
 def generate_followup_intent(question, previous_intent):
+    client = get_genai_client()
 
     schema = load_schema()
 

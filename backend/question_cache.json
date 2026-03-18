@@ -303,5 +303,38 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "show views by category": {
+    "sql": "SELECT category, SUM(views) AS sum_views FROM youtube_videos_staging GROUP BY category",
+    "intent": {
+      "metrics": [
+        "views"
+      ],
+      "aggregation": "SUM",
+      "group_by": [
+        "category"
+      ],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
+  },
+  "does duration_sec correlate with higher views? show distribution by length bucket": {
+    "sql": "SELECT AVG(duration_sec) AS avg_duration_sec, AVG(views) AS avg_views FROM youtube_videos_staging",
+    "intent": {
+      "metrics": [
+        "duration_sec",
+        "views"
+      ],
+      "aggregation": "AVG",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
   }
 }
