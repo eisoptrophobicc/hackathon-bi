@@ -170,6 +170,35 @@ def validate_database(conn, table_name):
     for row in cursor.fetchall():
         print(row)
 
+def ingest_dataframe(df):
+
+    conn = sqlite3.connect(str(DB_FILE))
+
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+
+    df.to_sql(
+        TABLE_NAME,
+        conn,
+        if_exists="replace",
+        index=False,
+        chunksize=500,
+        method="multi"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("DROP VIEW IF EXISTS youtube_videos_staging")
+
+    cursor.execute("""
+        CREATE VIEW youtube_videos_staging AS
+        SELECT DISTINCT *
+        FROM youtube_videos
+    """)
+
+    conn.commit()
+
+    conn.close()
 
 # Full ingestion pipeline
 def run_pipeline(csv_file):
@@ -178,11 +207,7 @@ def run_pipeline(csv_file):
 
     validate_dataframe(df)
 
-    conn = write_to_sqlite(df, DB_FILE, TABLE_NAME)
-
-    validate_database(conn, TABLE_NAME)
-
-    conn.close()
+    ingest_dataframe(df)
 
 if __name__ == "__main__":
 

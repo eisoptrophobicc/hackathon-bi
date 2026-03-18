@@ -43,12 +43,8 @@ textarea{font-family:Instrument Sans,sans-serif;}
 
 // ─── SCHEMA ─────────────────────────────────────────────────────────────────
 const SCHEMA=`
-TABLE: youtube_videos
-  timestamp DATETIME, video_id STRING, category STRING (Vlogs/Tech Reviews/Gaming/Education/etc),
-  language STRING, region STRING (2-letter code), duration_sec INTEGER, views INTEGER,
-  likes INTEGER, comments INTEGER, shares INTEGER,
-  sentiment_score FLOAT (-1.0 to 1.0), ads_enabled BOOLEAN
-DERIVED: engagement_rate=(likes+comments+shares)/views, like_rate=likes/views, duration_min=duration_sec/60
+TABLE: dataset
+Columns will be dynamically determined from the connected database.
 `;
 
 const SYS=`You are an elite YouTube Analytics BI assistant. Return ONLY valid JSON.
@@ -75,7 +71,7 @@ Colors: #D4A854 #7ECB9E #E07060 #EAC97A #A8895C #C97B6E #5E9E80 #E8C4A0
 On unclear query: {"error":"reason"}. ONLY JSON.`;
 
 // ─── API ─────────────────────────────────────────────────────────────────────
-async function callAPI(messages){
+async function callAPI(messages, mode="new"){
 
   const latest = messages[messages.length - 1].content;
 
@@ -86,14 +82,13 @@ async function callAPI(messages){
     },
     body: JSON.stringify({
       question: latest,
-      mode: "new"
+      mode: mode
     })
   });
 
   if(!r.ok) throw new Error(`API ${r.status}`);
 
   const data = await r.json();
-
   return data;
 }
 
@@ -1864,74 +1859,294 @@ function ChatModeToggle({mode,onChange,hasHistory}){
 }
 
 // ─── INPUT BAR ────────────────────────────────────────────────────────────────
-function InputBar({value,onChange,onSubmit,loading,chatMode,onChatModeChange,hasHistory,turnCount}){
+function InputBar({
+  value,
+  onChange,
+  onSubmit,
+  loading,
+  chatMode,
+  onChatModeChange,
+  hasHistory,
+  turnCount,
+  schema
+}){
+
   const CHAT_ICONS={
     plus:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     refresh:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>,
   };
-  const ref=useRef();
-  const[focus,setFocus]=useState(false);
-  const onKey=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onSubmit();}};
-  const resize=e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";};
-  const placeholder=chatMode==="continue"&&hasHistory?"Ask a follow-up question…":"Ask anything about your YouTube data…";
+
+  const ref = useRef();
+  const [focus,setFocus] = useState(false);
+
+  // Safe column count
+  const columnCount = schema?.columns ? Object.keys(schema.columns).length : 0;
+
+  const onKey = e => {
+    if(e.key==="Enter" && !e.shiftKey){
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
+  const resize = e => {
+    e.target.style.height="auto";
+    e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";
+  };
+
+  const placeholder =
+    chatMode==="continue" && hasHistory
+      ? "Ask a follow-up question…"
+      : "Ask anything about your YouTube data…";
+
   return(
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
+
+      {/* Chat mode indicator */}
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <ChatModeToggle mode={chatMode} onChange={onChatModeChange} hasHistory={hasHistory}/>
-        {chatMode==="continue"&&hasHistory&&(
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:8,background:T.aBg,border:`1px solid ${T.a0}33`,animation:"fadeIn .2s ease both"}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.a0} strokeWidth="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
-            <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>{turnCount} {turnCount===1?"turn":"turns"} in context</span>
+        <ChatModeToggle
+          mode={chatMode}
+          onChange={onChatModeChange}
+          hasHistory={hasHistory}
+        />
+
+        {chatMode==="continue" && hasHistory && (
+          <div style={{
+            display:"flex",
+            alignItems:"center",
+            gap:6,
+            padding:"5px 10px",
+            borderRadius:8,
+            background:T.aBg,
+            border:`1px solid ${T.a0}33`,
+            animation:"fadeIn .2s ease both"
+          }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.a0} strokeWidth="2.5">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            </svg>
+
+            <span style={{
+              fontSize:11,
+              color:T.a1,
+              fontFamily:"JetBrains Mono,monospace"
+            }}>
+              {turnCount} {turnCount===1?"turn":"turns"} in context
+            </span>
           </div>
         )}
-        {chatMode==="new"&&hasHistory&&(
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:8,background:T.b0,border:`1px solid ${T.b1}`,animation:"fadeIn .2s ease both"}}>
-            <span style={{fontSize:11,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>Fresh context · history cleared</span>
+
+        {chatMode==="new" && hasHistory && (
+          <div style={{
+            display:"flex",
+            alignItems:"center",
+            gap:6,
+            padding:"5px 10px",
+            borderRadius:8,
+            background:T.b0,
+            border:`1px solid ${T.b1}`,
+            animation:"fadeIn .2s ease both"
+          }}>
+            <span style={{
+              fontSize:11,
+              color:T.t2,
+              fontFamily:"JetBrains Mono,monospace"
+            }}>
+              Fresh context · history cleared
+            </span>
           </div>
         )}
       </div>
-      <div style={{background:T.bg2,borderRadius:16,border:`1px solid ${focus?(chatMode==="continue"?T.a0+"99":T.b3):T.b2}`,boxShadow:focus?`0 0 0 3px ${chatMode==="continue"?T.aRing:"rgba(212,168,84,0.15)"},0 4px 24px rgba(0,0,0,.4)`:"0 2px 16px rgba(0,0,0,.35)",transition:"border-color .2s,box-shadow .2s",overflow:"hidden"}}>
-        {chatMode==="continue"&&<div style={{height:2,background:`linear-gradient(90deg,${T.a0},${T.green})`}}/>}
-        <div style={{display:"flex",gap:0,alignItems:"flex-end",padding:"4px 4px 4px 16px"}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:focus?(chatMode==="continue"?T.a0:T.t1):T.t2,boxShadow:focus?`0 0 8px ${T.a0}`:"none",flexShrink:0,marginBottom:15,marginRight:10,transition:"all .2s"}}/>
-          <textarea ref={ref} value={value} onChange={e=>{onChange(e.target.value);resize(e);}} onKeyDown={onKey} onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)} disabled={loading} rows={1} placeholder={placeholder}
-            style={{all:"unset",flex:1,fontSize:15,color:T.t0,lineHeight:1.6,padding:"10px 0",resize:"none",maxHeight:120,overflowY:"auto",opacity:loading?.5:1,caretColor:T.a0,fontFamily:"Instrument Sans,sans-serif"}}/>
-          <VoiceButton onTranscript={txt=>{onChange(value?value+" "+txt:txt);}} disabled={loading}/>
-          <button onClick={onSubmit} disabled={loading||!value.trim()}
-            style={{all:"unset",cursor:value.trim()&&!loading?"pointer":"not-allowed",display:"flex",alignItems:"center",gap:7,margin:"6px 6px 6px 2px",padding:"10px 18px",borderRadius:12,fontSize:13,fontWeight:600,fontFamily:"Playfair Display,serif",background:value.trim()&&!loading?`linear-gradient(135deg,${T.a0},${T.a0}BB)`:T.bg4,color:value.trim()&&!loading?T.bg0:T.t2,transition:"all .15s",flexShrink:0,boxShadow:value.trim()&&!loading?`0 4px 16px ${T.a0}44`:"none"}}
-            onMouseEnter={e=>value.trim()&&!loading&&(e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`)}
-            onMouseLeave={e=>value.trim()&&!loading&&(e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},${T.a0}BB)`)}>
-            {loading?<div style={{width:14,height:14,border:`2px solid ${T.t2}`,borderTopColor:T.t0,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-              :chatMode==="continue"?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
-              :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
-            <span>{loading?"Analyzing":chatMode==="continue"?"Follow up":"Generate"}</span>
+
+      {/* Input container */}
+      <div style={{
+        background:T.bg2,
+        borderRadius:16,
+        border:`1px solid ${
+          focus
+            ? (chatMode==="continue" ? T.a0+"99" : T.b3)
+            : T.b2
+        }`,
+        boxShadow:focus
+          ? `0 0 0 3px ${chatMode==="continue"?T.aRing:"rgba(212,168,84,0.15)"},0 4px 24px rgba(0,0,0,.4)`
+          : "0 2px 16px rgba(0,0,0,.35)",
+        transition:"border-color .2s,box-shadow .2s",
+        overflow:"hidden"
+      }}>
+
+        {chatMode==="continue" &&
+          <div style={{
+            height:2,
+            background:`linear-gradient(90deg,${T.a0},${T.green})`
+          }}/>
+        }
+
+        <div style={{
+          display:"flex",
+          gap:0,
+          alignItems:"flex-end",
+          padding:"4px 4px 4px 16px"
+        }}>
+
+          {/* Status dot */}
+          <div style={{
+            width:6,
+            height:6,
+            borderRadius:"50%",
+            background:focus
+              ? (chatMode==="continue"?T.a0:T.t1)
+              : T.t2,
+            boxShadow:focus ? `0 0 8px ${T.a0}` : "none",
+            flexShrink:0,
+            marginBottom:15,
+            marginRight:10,
+            transition:"all .2s"
+          }}/>
+
+          {/* Textarea */}
+          <textarea
+            ref={ref}
+            value={value}
+            onChange={e=>{
+              onChange(e.target.value);
+              resize(e);
+            }}
+            onKeyDown={onKey}
+            onFocus={()=>setFocus(true)}
+            onBlur={()=>setFocus(false)}
+            disabled={loading}
+            rows={1}
+            placeholder={placeholder}
+            style={{
+              all:"unset",
+              flex:1,
+              fontSize:15,
+              color:T.t0,
+              lineHeight:1.6,
+              padding:"10px 0",
+              resize:"none",
+              maxHeight:120,
+              overflowY:"auto",
+              opacity: loading ? .5 : 1,
+              caretColor:T.a0,
+              fontFamily:"Instrument Sans,sans-serif"
+            }}
+          />
+
+          {/* Voice */}
+          <VoiceButton
+            onTranscript={txt=>{
+              onChange(value ? value+" "+txt : txt);
+            }}
+            disabled={loading}
+          />
+
+          {/* Submit */}
+          <button
+            onClick={onSubmit}
+            disabled={loading || !value.trim()}
+            style={{
+              all:"unset",
+              cursor:value.trim()&&!loading?"pointer":"not-allowed",
+              display:"flex",
+              alignItems:"center",
+              gap:7,
+              margin:"6px 6px 6px 2px",
+              padding:"10px 18px",
+              borderRadius:12,
+              fontSize:13,
+              fontWeight:600,
+              fontFamily:"Playfair Display,serif",
+              background:value.trim()&&!loading
+                ? `linear-gradient(135deg,${T.a0},${T.a0}BB)`
+                : T.bg4,
+              color:value.trim()&&!loading?T.bg0:T.t2,
+              transition:"all .15s",
+              flexShrink:0,
+              boxShadow:value.trim()&&!loading
+                ? `0 4px 16px ${T.a0}44`
+                : "none"
+            }}
+          >
+            {loading
+              ? <div style={{
+                  width:14,
+                  height:14,
+                  border:`2px solid ${T.t2}`,
+                  borderTopColor:T.t0,
+                  borderRadius:"50%",
+                  animation:"spin 1s linear infinite"
+                }}/>
+              : chatMode==="continue"
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            }
+
+            <span>
+              {loading
+                ? "Analyzing"
+                : chatMode==="continue"
+                  ? "Follow up"
+                  : "Generate"}
+            </span>
+
           </button>
         </div>
-        <div style={{padding:"8px 16px",borderTop:`1px solid ${T.b0}`,display:"flex",alignItems:"center",gap:8,background:T.bg3}}>
-          <span style={{fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>↵ {chatMode==="continue"?"follow up":"generate"} · ⇧↵ new line</span>
+
+        {/* Footer */}
+        <div style={{
+          padding:"8px 16px",
+          borderTop:`1px solid ${T.b0}`,
+          display:"flex",
+          alignItems:"center",
+          gap:8,
+          background:T.bg3
+        }}>
+          <span style={{
+            fontSize:10,
+            color:T.t2,
+            fontFamily:"JetBrains Mono,monospace"
+          }}>
+            ↵ {chatMode==="continue"?"follow up":"generate"} · ⇧↵ new line
+          </span>
+
           <div style={{flex:1}}/>
+
           <div style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{width:5,height:5,borderRadius:"50%",background:T.green}}/>
-            <span style={{fontSize:10,color:T.green,fontFamily:"JetBrains Mono,monospace"}}>youtube_videos · 12 cols</span>
+            <div style={{
+              width:5,
+              height:5,
+              borderRadius:"50%",
+              background:T.green
+            }}/>
+
+            <span style={{
+              fontSize:10,
+              color:T.green,
+              fontFamily:"JetBrains Mono,monospace"
+            }}>
+              {columnCount
+                ? `Dataset connected · ${columnCount} cols`
+                : "No database connected"}
+            </span>
+
           </div>
         </div>
+
       </div>
     </div>
   );
 }
 
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDeleteSaved,alerts,onAddAlert,onDeleteAlert,schedule,onSaveSchedule,uploadedDatasets,onLoadUploadedDataset,onToast}){
-  const [datasetFilter,setDatasetFilter]=useState("");
-  const [datasetSort,setDatasetSort]=useState("newest");
-  const schemaFields=[
-    {name:"timestamp",type:"DATETIME"},{name:"video_id",type:"STRING"},
-    {name:"category",type:"STRING"},{name:"language",type:"STRING"},
-    {name:"region",type:"STRING"},{name:"duration_sec",type:"INTEGER"},
-    {name:"views",type:"INTEGER"},{name:"likes",type:"INTEGER"},
-    {name:"comments",type:"INTEGER"},{name:"shares",type:"INTEGER"},
-    {name:"sentiment_score",type:"FLOAT"},{name:"ads_enabled",type:"BOOLEAN"},
-  ];
+function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDeleteSaved,alerts,onAddAlert,onDeleteAlert,schedule,onSaveSchedule,uploadedDatasets,onLoadUploadedDataset,onToast,schema}){
+  if(activeTab === "schema"){
+            console.log("Rendering schema:", schema);
+          }
+  const[csvDelimiter,setCsvDelimiter]=useState(",");
+  const[csvHasHeader,setCsvHasHeader]=useState(true);
+  const[uploadedData,setUploadedData]=useState(null);
+
   const navItems=[
     {id:"dash",label:"Dashboard",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>},
     {id:"saved",label:"Saved",badge:saved.length,icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>},
@@ -1989,20 +2204,117 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
         )}
         {activeTab==="schema"&&(
           <div>
-            <p style={{margin:"0 0 8px 8px",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.08em"}}>youtube_videos</p>
-            <div style={{padding:"10px",borderRadius:10,background:T.bg3,border:`1px solid ${T.b1}`}}>
-              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:T.green,boxShadow:`0 0 6px ${T.green}`}}/>
-                <span style={{fontSize:11,fontWeight:600,color:T.t0,fontFamily:"Instrument Sans,sans-serif"}}>youtube_videos</span>
-                <span style={{marginLeft:"auto",fontSize:9,fontFamily:"JetBrains Mono,monospace",color:T.green,background:T.greenBg,padding:"1px 6px",borderRadius:4}}>12 cols</span>
+            <p style={{
+              margin:"0 0 8px 8px",
+              fontSize:10,
+              color:T.t2,
+              fontFamily:"JetBrains Mono,monospace",
+              textTransform:"uppercase",
+              letterSpacing:"0.08em"
+            }}>
+              Data Schema
+            </p>
+
+            {!schema && (
+              <div style={{
+                padding:"10px",
+                borderRadius:10,
+                background:T.bg3,
+                border:`1px solid ${T.b1}`
+              }}>
+                <span style={{
+                  fontSize:11,
+                  color:T.t2,
+                  fontFamily:"Instrument Sans,sans-serif"
+                }}>
+                  No database connected
+                </span>
               </div>
-              {schemaFields.map(f=>(
-                <div key={f.name} style={{display:"flex",alignItems:"baseline",gap:6,padding:"3px 0",borderBottom:`1px solid ${T.b0}`}}>
-                  <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span>
-                  <span style={{fontSize:9,color:T.t2,fontFamily:"JetBrains Mono,monospace",flexShrink:0}}>{f.type}</span>
+            )}
+
+            {schema && (
+              <div style={{
+                padding:"10px",
+                borderRadius:10,
+                background:T.bg3,
+                border:`1px solid ${T.b1}`
+              }}>
+
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
+                  <div style={{
+                    width:7,
+                    height:7,
+                    borderRadius:"50%",
+                    background:T.green,
+                    boxShadow:`0 0 6px ${T.green}`
+                  }}/>
+
+                  <span style={{
+                    fontSize:11,
+                    fontWeight:600,
+                    color:T.t0,
+                    fontFamily:"Instrument Sans,sans-serif"
+                  }}>
+                    Connected Dataset
+                  </span>
+
+                  <span style={{
+                    marginLeft:"auto",
+                    fontSize:9,
+                    fontFamily:"JetBrains Mono,monospace",
+                    color:T.green,
+                    background:T.greenBg,
+                    padding:"1px 6px",
+                    borderRadius:4
+                  }}>
+                    {Object.keys(schema.columns).length} cols
+                  </span>
                 </div>
-              ))}
-            </div>
+
+                {Object.entries(schema.columns).map(([name,info])=>(
+                  <div key={name} style={{
+                    display:"flex",
+                    alignItems:"baseline",
+                    gap:6,
+                    padding:"3px 0",
+                    borderBottom:`1px solid ${T.b0}`
+                  }}>
+                    <span style={{
+                      fontSize:11,
+                      color:T.a1,
+                      fontFamily:"JetBrains Mono,monospace",
+                      flex:1,
+                      overflow:"hidden",
+                      textOverflow:"ellipsis",
+                      whiteSpace:"nowrap"
+                    }}>
+                      {name}
+                    </span>
+
+                    <span style={{
+                      fontSize:9,
+                      color:T.t2,
+                      fontFamily:"JetBrains Mono,monospace",
+                      flexShrink:0
+                    }}>
+                      {info.type}
+                    </span>
+
+                    <span style={{
+                      fontSize:9,
+                      color:T.green,
+                      fontFamily:"JetBrains Mono,monospace",
+                      flexShrink:0
+                    }}>
+                      {info.role}
+                    </span>
+
+                  </div>
+                ))}
+
+              </div>
+            )}
+
           </div>
         )}
         {activeTab==="alerts"&&<AlertsPanel alerts={alerts} onAdd={onAddAlert} onDelete={onDeleteAlert}/>}
@@ -2010,18 +2322,51 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
         {activeTab==="db"&&(
           <div>
             <p style={{margin:"0 0 8px 8px",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.08em"}}>Uploaded Datasets</p>
-            {uploadedDatasets.length===0
-              ?<p style={{fontSize:12,color:T.t2,padding:"8px 10px",fontFamily:"Instrument Sans,sans-serif"}}>No uploaded CSVs yet. Use Upload CSV button above.</p>
-              :uploadedDatasets.map((ds,i)=>(
-                <button key={ds.id} onClick={()=>onLoadUploadedDataset(ds)}
-                  style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:"8px 10px",borderRadius:9,fontSize:12,color:T.t1,background:T.bg3,border:`1px solid ${T.b1}`,marginBottom:4,fontFamily:"Instrument Sans,sans-serif"}}
-                  onMouseEnter={e=>e.currentTarget.style.background=T.bg2}
-                  onMouseLeave={e=>e.currentTarget.style.background=T.bg3}>
-                  <span style={{flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ds.name}</span>
-                  <span style={{fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>{ds.rows.length} rows</span>
-                </button>
-              ))
-            }
+           {!schema?.columns
+            ?<p style={{
+                fontSize:12,
+                color:T.t2,
+                padding:"8px 10px",
+                fontFamily:"Instrument Sans,sans-serif"
+              }}>
+                No database connected. Upload a CSV to begin.
+            </p>
+
+            :(
+              <div style={{
+                padding:"8px 10px",
+                borderRadius:9,
+                background:T.bg3,
+                border:`1px solid ${T.b1}`,
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"space-between"
+              }}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{
+                    width:6,
+                    height:6,
+                    borderRadius:"50%",
+                    background:T.green
+                  }}/>
+                  <span style={{
+                    fontSize:12,
+                    color:T.green,
+                    fontFamily:"Instrument Sans,sans-serif"
+                  }}>
+                    Database connected
+                  </span>
+                </div>
+
+                <span style={{
+                  fontSize:10,
+                  color:T.t2,
+                  fontFamily:"JetBrains Mono,monospace"
+                }}>
+                  {Object.keys(schema.columns).length} columns
+                </span>
+              </div>
+          )}
             {uploadedData&&(
               <div style={{marginTop:12,padding:10,border:`1px solid ${T.b1}`,borderRadius:10,background:T.bg3}}>
                 <p style={{margin:"0 0 8px",fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>Dataset preview: {uploadedData.headers.join(", ")}</p>
@@ -2858,7 +3203,7 @@ function OnboardingComplete({user,darkMode = true,onDone}){
   });
 
   const stats=[
-    {val:"12",label:"columns loaded"},
+    {val:"Connection",label:"Successful"},
     {val:"AI",label:"pipeline active"},
     {val:"live",label:"status"},
   ];
@@ -3080,6 +3425,10 @@ export default function DIDashboard(){
   });
   const fileInputRef=useRef(null);
   const bottomRef=useRef();
+  const [schema,setSchema] = useState(null);
+  useEffect(()=>{
+    console.log("Schema state updated:", schema);
+  },[schema]);
 
   // Apply theme
   Object.assign(T, darkMode ? {
@@ -3137,18 +3486,52 @@ export default function DIDashboard(){
     return {headers,data,numberCols};
   };
 
-  const handleCSVUpload=async(e)=>{
-    const f=e.target.files?.[0];
-    if(!f)return;
-    const text=await f.text();
-    const parsed=parseCSVToData(text,{delimiter:csvDelimiter,hasHeader:csvHasHeader});
-    if(!parsed){setToast("File could not be parsed as CSV.");e.target.value="";return;}
+  const handleCSVUpload = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
 
-    const xKey=parsed.headers[0];
-    const yKey=parsed.numberCols.find(c=>c!==xKey)||parsed.numberCols[0]||parsed.headers[1]||parsed.headers[0];
-    const chartData=parsed.data.slice(0,12).map(r=>({[xKey]:r[xKey], [yKey]:Number(r[yKey]||0)}));
+    try {
+      const formData = new FormData();
+      formData.append("file", f);
 
-    setUploadedData({name:f.name,headers:parsed.headers,rows:parsed.data,numberCols:parsed.numberCols});
+      const res = await fetch("http://localhost:8000/upload_csv", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status !== "success") {
+        throw new Error(data.message || "Upload failed");
+      }
+
+      console.log("Backend upload:", data);
+      await loadSchema();
+
+    } catch (err) {
+      console.error("Backend upload failed:", err);
+      setToast("Backend upload failed");
+    }
+
+    const text = await f.text();
+
+    const parsed = parseCSVToData(text,{
+      delimiter: csvDelimiter,
+      hasHeader: csvHasHeader
+    });
+
+    if (!parsed){
+      setToast("File could not be parsed as CSV.");
+      e.target.value="";
+      return;
+    }
+
+    setUploadedData({
+      name:f.name,
+      headers:parsed.headers,
+      rows:parsed.data,
+      numberCols:parsed.numberCols
+    });
 
     const dataset={
       id:Date.now(),
@@ -3160,13 +3543,39 @@ export default function DIDashboard(){
       hasHeader:csvHasHeader,
       uploadedAt:new Date().toISOString(),
     };
+
     const updatedDatasets=[dataset,...uploadedDatasets].slice(0,20);
+
     setUploadedDatasets(updatedDatasets);
     saveDatasetsToLocalStorage(updatedDatasets);
 
     loadUploadedDataset(dataset);
+
     setToast(`Loaded ${parsed.data.length} rows from ${f.name}`);
+
     e.target.value="";
+
+    loadSchema();
+  };
+
+  const loadSchema = async () => {
+
+    try {
+
+      const res = await fetch("http://localhost:8000/schema");
+      const data = await res.json();
+      console.log("SCHEMA RESPONSE:", data);
+      if (data.status === "success") {
+        setSchema(data.schema);
+      } else {
+        setSchema(null);
+      }
+
+    } catch (e) {
+      console.error("Schema load failed", e);
+      setSchema(null);
+    }
+
   };
 
   const openCSVPicker=()=>fileInputRef.current?.click();
@@ -3181,7 +3590,7 @@ export default function DIDashboard(){
     const yKey=dataset.numberCols.find(c=>c!==xKey)||dataset.numberCols[0];
     const chartData=dataset.rows.slice(0,15).map(r=>({[xKey]:r[xKey], [yKey]:Number(r[yKey]||0)}));
     setResult({
-      title:`Uploaded dataset: ${dataset.name}`,
+      title:`Active Dataset`,
       summary:`${dataset.rows.length} rows loaded, ${dataset.headers.length} columns`,
       sql:`-- source: uploaded csv ${dataset.name}`,
       kpis:[
@@ -3204,6 +3613,10 @@ export default function DIDashboard(){
     setSaved(updated);saveToDisk(updated);
     setToast(`"${title}" saved`);
   },[result,dashTitle,charts,saved]);
+  
+  useEffect(()=>{
+    loadSchema();
+  },[]);
 
   useEffect(()=>{
     const h=e=>{
@@ -3228,29 +3641,84 @@ export default function DIDashboard(){
   const handleChartTypeChange=useCallback((chartId,newType)=>setCharts(prev=>prev.map(c=>c.id===chartId?{...c,type:newType}:c)),[]);
   const handleAnnotationSave=useCallback((chartId,notes)=>setAnnotations(prev=>({...prev,[chartId]:notes})),[]);
 
-  const submit=useCallback(async q=>{
-    const text=(q??query).trim();
-    if(!text||loading)return;
-    setLoadingPrompt(text);setQuery("");setLoading(true);setError(null);setStep(0);
-    const baseHistory=chatMode==="continue"?history:[];
-    if(chatMode==="new"){setHistory([]);setResult(null);setCharts([]);setDashTitle(null);}
-    for(let i=1;i<STEPS.length;i++){await new Promise(r=>setTimeout(r,420));setStep(i);}
-    try{
-      const content=text+(dateRange!=="all"?` [Filter: date range = ${dateRange}]`:"");
-      const msgs=[...baseHistory,{role:"user",content}];
-      const data=await callAPI(msgs);
-      if(data.error){setError(data.error);}
-      else{
+  const submit = useCallback(async (q) => {
+
+    // Handle both string input and form submit events
+    const input = typeof q === "string" ? q : query;
+    const text = String(input || "").trim();
+
+    if (!text || loading) return;
+
+    setLoadingPrompt(text);
+    setQuery("");
+    setLoading(true);
+    setError(null);
+    setStep(0);
+
+    const baseHistory = chatMode === "continue" ? history : [];
+
+    if (chatMode === "new") {
+      setHistory([]);
+      setResult(null);
+      setCharts([]);
+      setDashTitle(null);
+    }
+
+    // fake pipeline animation
+    for (let i = 1; i < STEPS.length; i++) {
+      await new Promise(r => setTimeout(r, 420));
+      setStep(i);
+    }
+
+    try {
+
+      // keep UI content separate from query
+      const content = text + (
+        dateRange !== "all"
+          ? ` [Filter: date range = ${dateRange}]`
+          : ""
+      );
+
+      // send CLEAN text to backend
+      const msgs = [...baseHistory, {
+        role: "user",
+        content: text
+      }];
+
+      const data = await callAPI(msgs, chatMode);
+
+      if (data.error) {
+        setError(data.error);
+      } else {
+
         setResult(data);
-        const newH=[...msgs,{role:"assistant",content:JSON.stringify(data)}];
-        setHistory(newH);
-        setQHistory(prev=>[{q:text,mode:chatMode},...prev].slice(0,15));
-        if(chatMode==="new")setChatMode("continue");
+
+        const newHistory = [
+          ...msgs,
+          { role: "assistant", content: JSON.stringify(data) }
+        ];
+
+        setHistory(newHistory);
+
+        setQHistory(prev => [
+          { q: text, mode: chatMode },
+          ...prev
+        ].slice(0, 15));
+
+        // switch to follow-up mode automatically
+        if (chatMode === "new") {
+          setChatMode("continue");
+        }
       }
-    }catch(e){setError(e.message||"Something went wrong.");}
+
+    } catch (e) {
+      setError(e.message || "Something went wrong.");
+    }
+
     setLoading(false);
     setLoadingPrompt("");
-  },[query,loading,history,chatMode,dateRange]);
+
+  }, [query, loading, history, chatMode, dateRange]);
 
   // Single return — no early returns (avoids JSX transform issues)
   return(
@@ -3278,9 +3746,11 @@ export default function DIDashboard(){
       {user && !showOnboarding && (
       <div style={{display:"flex",height:"100vh",background:T.bg0,color:T.t0,fontFamily:"Instrument Sans,sans-serif",overflow:"hidden"}}>
         {sidebar&&(
+          
           <Sidebar activeTab={tab} onTab={setTab}
             qHistory={qHistory} onHistoryClick={q=>submit(q)}
             saved={saved} onLoadSaved={handleLoadSaved} onDeleteSaved={handleDeleteSaved}
+            schema={schema}
             alerts={alerts} onAddAlert={a=>setAlerts(p=>[...p,a])} onDeleteAlert={i=>setAlerts(p=>p.filter((_,j)=>j!==i))}
             schedule={schedule} onSaveSchedule={setSchedule}
             uploadedDatasets={uploadedDatasets} onLoadUploadedDataset={loadUploadedDataset}
@@ -3513,9 +3983,17 @@ export default function DIDashboard(){
                   </button>
                 </div>
               ):(
-                <InputBar value={query} onChange={setQuery} onSubmit={()=>submit()} loading={loading}
-                  chatMode={chatMode} onChatModeChange={handleModeChange}
-                  hasHistory={history.length>0} turnCount={Math.floor(history.length/2)}/>
+                <InputBar
+                  value={query}
+                  onChange={setQuery}
+                  onSubmit={submit}
+                  loading={loading}
+                  chatMode={chatMode}
+                  onChatModeChange={handleModeChange}
+                  schema={schema}
+                  hasHistory={history.length > 0}
+                  turnCount={Math.floor(history.length / 2)}
+                />
               )}
             </div>
           </div>
