@@ -51,10 +51,17 @@ def query(req: QueryRequest):
 
     result = run_query(req.question, req.mode)
 
-    # If error occurs just return it
-    if result["status"] != "success":
-        return result
+    # 🔴 HANDLE ERROR PROPERLY
+    if result.get("status") != "success":
+        return {
+            "title": req.question,
+            "summary": result.get("reason", {}).get("reason", "Couldn't process this query."),
+            "sql": None,
+            "kpis": [],
+            "charts": []
+        }
 
+    # ✅ NORMAL FLOW
     return adapt_result(result, req.question)
 
 @app.post("/register")

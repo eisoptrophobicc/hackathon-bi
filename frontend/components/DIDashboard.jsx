@@ -1230,12 +1230,12 @@ const FEATURE_ICONS={
         {/* Badge */}
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"7px 16px",borderRadius:999,background:`linear-gradient(180deg, ${T.aBg2}, ${T.aBg})`,border:`1px solid ${T.a0}33`,boxShadow:`inset 0 1px 0 rgba(255,255,255,.04)`,marginBottom:24,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) both"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:T.a0,boxShadow:`0 0 8px ${T.a0}`}}/>
-          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.06em"}}> · Built for YouTube Analytics</span>
+          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.06em"}}> Built for Data Analytics</span>
         </div>
 
         {/* Headline */}
         <h1 style={{margin:"0 0 20px",fontSize:"clamp(40px,6vw,76px)",fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-.04em",lineHeight:1.04,maxWidth:860,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .08s both"}}>
-          Your YouTube data,<br/>
+          Your Complex Data,<br/>
           <span style={{color:T.a0,fontStyle:"italic"}}>in plain English.</span>
         </h1>
 
@@ -1969,7 +1969,7 @@ function InputBar({
   const placeholder =
     chatMode==="continue" && hasHistory
       ? "Ask a follow-up question…"
-      : "Ask anything about your YouTube data…";
+      : "Ask anything about your data…";
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -2577,8 +2577,8 @@ function EmptyState({onPrompt}){
         <div style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:T.green,boxShadow:`0 0 12px ${T.green}`,border:`2px solid ${T.bg0}`}}/>
       </div>
       <div style={{textAlign:"center",maxWidth:460}}>
-        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",lineHeight:1.2}}>YouTube analytics, in plain English.</h2>
-        <p style={{margin:"0 0 6px",fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>Ask anything about your dataset — views, sentiment, monetization, regional performance, and more.</p>
+        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",lineHeight:1.2}}>Your Data, in plain English.</h2>
+        <p style={{margin:"0 0 6px",fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>Ask anything about your dataset.</p>
         <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,background:T.aBg,border:`1px solid ${T.a0}33`,marginTop:4}}>
           <div style={{width:5,height:5,borderRadius:"50%",background:T.green}}/>
           <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>Dataset Connected · Analytics Engine Ready</span>
@@ -3772,8 +3772,13 @@ export default function DIDashboard(){
 
       const data = await callAPI(msgs, chatMode);
 
-      if (data.error) {
-        const fallback = buildNoAnswerResult(text, data.error);
+      if( (!data.charts || data.charts.length === 0) && (!data.kpis || data.kpis.length === 0)) {
+
+          const fallback = buildNoAnswerResult(
+            text,
+            data.summary || "No data available for this query."
+          );
+        ;
         setError(null);
         setResult(fallback);
         setCharts([]);

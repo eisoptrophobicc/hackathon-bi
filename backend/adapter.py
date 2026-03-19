@@ -216,3 +216,4 @@ def adapt_result(result, question):
         "kpis": [],
         "charts": []
     }
+    
