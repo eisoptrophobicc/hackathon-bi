@@ -354,5 +354,59 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "show total views, likes, comments, and shares": {
+    "sql": "SELECT SUM(views) AS sum_views, SUM(likes) AS sum_likes, SUM(comments) AS sum_comments, SUM(shares) AS sum_shares FROM youtube_videos_staging",
+    "intent": {
+      "metrics": [
+        "views",
+        "likes",
+        "comments",
+        "shares"
+      ],
+      "aggregation": "SUM",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
+  },
+  "show total views, likes, comments and shares": {
+    "sql": "SELECT SUM(views) AS sum_views, SUM(likes) AS sum_likes, SUM(comments) AS sum_comments, SUM(shares) AS sum_shares FROM youtube_videos_staging",
+    "intent": {
+      "metrics": [
+        "views",
+        "likes",
+        "comments",
+        "shares"
+      ],
+      "aggregation": "SUM",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
+  },
+  "show views, likes, comments and shares": {
+    "sql": "SELECT SUM(views) AS sum_views, SUM(likes) AS sum_likes, SUM(comments) AS sum_comments, SUM(shares) AS sum_shares FROM youtube_videos_staging",
+    "intent": {
+      "metrics": [
+        "views",
+        "likes",
+        "comments",
+        "shares"
+      ],
+      "aggregation": "SUM",
+      "group_by": [],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
   }
 }

@@ -3,8 +3,11 @@ def adapt_result(result, question):
     chart = result.get("chart", {})
     data = result.get("data", [])
 
+    title = question
+    summary = result.get("insight")
+    sql = result.get("sql")
+
     if not data:
-        
         return {
             "title": title,
             "summary": "No data available for this query.",
@@ -15,10 +18,7 @@ def adapt_result(result, question):
 
     chart_type = chart.get("type")
 
-    title = question
-    summary = result.get("insight")
-    sql = result.get("sql")
-
+    # KPI
     if chart_type == "kpi" and data:
 
         key = chart.get("value")
@@ -40,13 +40,17 @@ def adapt_result(result, question):
             "charts": []
         }
 
+    # PIE
     if chart_type == "pie":
 
         labels = chart.get("labels")
         values = chart.get("values")
 
         pie_data = [
-            {"name": row.get(labels), "value": row.get(values)}
+            {
+                "name": str(row.get(labels)).title(),
+                "value": row.get(values)
+            }
             for row in data
         ]
 
@@ -65,12 +69,16 @@ def adapt_result(result, question):
             ]
         }
 
+    # 🔥 RADAR (FIXED PROPERLY)
     if chart_type == "radar":
 
         metrics = chart.get("metrics", [])
 
         radar_data = [
-            {"metric": m, "value": data[0].get(m)}
+            {
+                "metric": m.replace("_", " ").title(),  # ✅ FIX label
+                "value": data[0].get(m, 0)
+            }
             for m in metrics
         ]
 
@@ -84,11 +92,14 @@ def adapt_result(result, question):
                     "id": "c1",
                     "type": "radar",
                     "title": title,
-                    "data": radar_data
+                    "data": radar_data,
+                    "angleKey": "metric",   # ✅ IMPORTANT
+                    "valueKey": "value"     # ✅ IMPORTANT
                 }
             ]
         }
 
+    # GROUPED BAR
     if chart_type == "grouped_bar":
 
         x = chart.get("x")
@@ -120,6 +131,7 @@ def adapt_result(result, question):
             ]
         }
 
+    # SCATTER
     if chart_type == "scatter":
 
         return {
@@ -139,6 +151,7 @@ def adapt_result(result, question):
             ]
         }
 
+    # LINE
     if chart_type == "line":
 
         x = chart.get("x")
@@ -159,7 +172,7 @@ def adapt_result(result, question):
                     "yKeys": [
                         {
                             "key": y,
-                            "label": y,
+                            "label": y.replace("_", " ").title(),
                             "color": "#D4A854"
                         }
                     ]
@@ -167,6 +180,7 @@ def adapt_result(result, question):
             ]
         }
 
+    # BAR
     if chart_type == "bar":
 
         x = chart.get("x")
@@ -187,7 +201,7 @@ def adapt_result(result, question):
                     "yKeys": [
                         {
                             "key": y,
-                            "label": y,
+                            "label": y.replace("_", " ").title(),
                             "color": "#D4A854"
                         }
                     ]
@@ -202,5 +216,3 @@ def adapt_result(result, question):
         "kpis": [],
         "charts": []
     }
-
-    

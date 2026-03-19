@@ -21,7 +21,7 @@ def detect_chart(data):
             categorical.append(col)
 
     # KPI (single metric)
-    if len(data) == 1 and len(numeric) >= 1:
+    if len(data) == 1 and len(numeric) == 1:
         return {
             "type": "kpi",
             "value": numeric[0]
