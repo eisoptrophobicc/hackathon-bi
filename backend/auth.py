@@ -1,7 +1,12 @@
 import os
 import sqlite3
+from datetime import datetime, timedelta
+
+
 
 DB_NAME = os.path.join(os.path.dirname(__file__), "auth.db")
+
+
 
 def get_connection():
     return sqlite3.connect(DB_NAME)
@@ -52,3 +57,13 @@ def login_user(email):
     conn.close()
 
     return user
+
+def update_last_login(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
+        (user_id,)
+    )
+    conn.commit()
+    conn.close()

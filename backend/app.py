@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 
+
 from setup_db import load_dataframe, ingest_dataframe
 from build_schema_memory import build_schema
 
@@ -76,10 +77,14 @@ def login(req: LoginRequest):
     if not bcrypt.verify(req.password, stored_hash):
         return {"status": "error", "message": "invalid password"}
 
+    auth.update_last_login(user[0])
+
+
     return {
-        "status": "success",
-        "message": "login successful",
-        "email": user[1]
+    "status": "success",
+    "message": "login successful",
+    "email": user[1],
+    "token_type": "bearer"
     }
 
 @app.post("/upload_csv")

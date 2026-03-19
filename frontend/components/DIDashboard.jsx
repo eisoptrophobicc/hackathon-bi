@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from "react";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
@@ -181,9 +181,24 @@ const ChartRenderer=memo(({chart})=>{
       <ResponsiveContainer width="100%" height={H}>
         <RadarChart data={chart.data} margin={{top:16,right:28,bottom:0,left:28}}>
           <PolarGrid stroke={T.b2}/>
-          <PolarAngleAxis dataKey={chart.xKey||"subject"} tick={{fontSize:11,fill:T.t1,fontFamily:"Instrument Sans,sans-serif"}}/>
-          {yKeys.map(y=><Radar key={y.key} name={y.label} dataKey={y.key} stroke={y.color} fill={y.color} fillOpacity={0.10} strokeWidth={2} dot={{r:3,fill:y.color,strokeWidth:0}}/>)}
-          <Tooltip content={<DarkTip/>}/><Legend wrapperStyle={{fontSize:12,color:"#A8895C",paddingTop:14,fontFamily:"Instrument Sans,sans-serif"}}/>
+          <PolarAngleAxis 
+            dataKey={chart.angleKey || "metric"} 
+            tick={{fontSize:11,fill:T.t1,fontFamily:"Instrument Sans,sans-serif"}}
+          />
+          <PolarRadiusAxis tick={false} axisLine={false}/>
+          <Radar
+            name="Metrics"
+            dataKey={chart.valueKey || "value"}
+            stroke={T.chart[0]}
+            fill={T.chart[0]}
+            fillOpacity={0.10}
+            strokeWidth={2}
+            dot={{r:3,fill:T.chart[0],strokeWidth:0}}
+          />
+
+          <Tooltip content={<DarkTip/>}/>
+          <Legend wrapperStyle={{fontSize:12,color:"#A8895C",paddingTop:14,fontFamily:"Instrument Sans,sans-serif"}}/>
+
         </RadarChart>
       </ResponsiveContainer>
     );
@@ -2520,7 +2535,13 @@ function Topbar({title,onNew,onToggle,onSave,onShare,onExport,hasResult,dateRang
             <span style={{fontSize:11,color:T.t0,fontFamily:"Instrument Sans,sans-serif",fontWeight:500,lineHeight:1.2}}>{user.guest?"Guest":user.name||user.email}</span>
             {user.guest&&<span style={{fontSize:9,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>guest mode</span>}
           </div>
-          <button onClick={onSignOut} title="Sign out"
+          <button onClick={() => {
+            console.log("logout clicked");
+            localStorage.removeItem("token");
+            setUser(null);
+            setShowLanding(true);
+            }} 
+            title="Sign out"
             style={{all:"unset",cursor:"pointer",width:26,height:26,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",color:T.t2,transition:"all .12s"}}
             onMouseEnter={e=>{e.currentTarget.style.background=T.bg3;e.currentTarget.style.color=T.red;}}
             onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.t2;}}>
@@ -3462,7 +3483,11 @@ export default function DIDashboard(){
   const[showShare,setShowShare]=useState(false);
   const[showExport,setShowExport]=useState(false);
   const[toast,setToast]=useState(null);
-  const[user,setUser]=useState(null);
+  const [user,setUser]=useState(null);
+  const handleSignOut = () => {
+    setUser(null);
+    setShowLanding(true);
+  };
   const[showOnboarding,setShowOnboarding]=useState(false);
   const[demoMode,setDemoMode]=useState(false);
   const[showLanding,setShowLanding]=useState(true);
