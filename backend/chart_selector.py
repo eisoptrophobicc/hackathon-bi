@@ -8,8 +8,14 @@ def detect_chart(data):
     numeric = []
     categorical = []
 
+    # 🔥 FIX: proper type detection (handles bool + binary)
     for col, val in row.items():
-        if isinstance(val, (int, float)):
+
+        unique_vals = set(r[col] for r in data if col in r)
+
+        if isinstance(val, bool) or unique_vals <= {0, 1}:
+            categorical.append(col)
+        elif isinstance(val, (int, float)):
             numeric.append(col)
         else:
             categorical.append(col)
@@ -82,7 +88,7 @@ def detect_chart(data):
             "y": numeric[0]
         }
 
-    # Scatter
+    # 🔥 FIX: scatter should be LAST (lowest priority)
     if len(numeric) >= 2:
         return {
             "type": "scatter",

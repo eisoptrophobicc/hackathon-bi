@@ -336,5 +336,23 @@
       "limit": null,
       "calculation": null
     }
+  },
+  "compare views and likes between ads_enabled true vs false videos": {
+    "sql": "SELECT ads_enabled, SUM(views) AS sum_views, SUM(likes) AS sum_likes FROM youtube_videos_staging GROUP BY ads_enabled",
+    "intent": {
+      "metrics": [
+        "views",
+        "likes"
+      ],
+      "aggregation": "SUM",
+      "group_by": [
+        "ads_enabled"
+      ],
+      "filters": [],
+      "order_by": null,
+      "order": null,
+      "limit": null,
+      "calculation": null
+    }
   }
 }
