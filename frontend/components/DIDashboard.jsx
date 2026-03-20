@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from "react";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
@@ -38,6 +38,10 @@ const CSS=`
 @keyframes drift{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(0,-10px,0);}}
 @keyframes orbit{from{transform:rotate(0deg) translateX(84px) rotate(0deg);}to{transform:rotate(360deg) translateX(84px) rotate(-360deg);}}
 @keyframes wave{0%,100%{transform:scaleY(.42);opacity:.45;}50%{transform:scaleY(1);opacity:1;}}
+@keyframes riseIn{from{opacity:0;transform:translateY(18px) scale(.985);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes floatSlow{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(0,-14px,0);}}
+@keyframes aurora{0%{transform:translate3d(-2%,-1%,0) scale(1);}50%{transform:translate3d(2%,2%,0) scale(1.04);}100%{transform:translate3d(-2%,-1%,0) scale(1);}}
+@keyframes tiltGlow{0%,100%{transform:rotate(-2deg) scale(1);opacity:.7;}50%{transform:rotate(2deg) scale(1.03);opacity:1;}}
 textarea{font-family:Instrument Sans,sans-serif;}
 `;
 
@@ -104,6 +108,25 @@ function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"
 function saveToDisk(arr){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));}catch{}}
 function clearStorage(){try{localStorage.removeItem(STORAGE_KEY);}catch{}}
 
+function buildNoAnswerResult(query, reason="I couldn't find enough structure in that request to build a reliable dashboard."){
+  return{
+    title:"Query needs refinement",
+    summary:reason,
+    sql:"",
+    kpis:[],
+    charts:[],
+    followUps:[
+      `Show total views by category`,
+      `Compare engagement rate by region in the last 30 days`,
+      `Break down revenue by language`
+    ],
+    unanswerable:true,
+    originalQuery:query,
+  };
+}
+
+const BACKEND_BASE_URL = "http://127.0.0.1:8000";
+
 // ─── TOOLTIP ─────────────────────────────────────────────────────────────────
 const DarkTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null;
@@ -158,9 +181,24 @@ const ChartRenderer=memo(({chart})=>{
       <ResponsiveContainer width="100%" height={H}>
         <RadarChart data={chart.data} margin={{top:16,right:28,bottom:0,left:28}}>
           <PolarGrid stroke={T.b2}/>
-          <PolarAngleAxis dataKey={chart.xKey||"subject"} tick={{fontSize:11,fill:T.t1,fontFamily:"Instrument Sans,sans-serif"}}/>
-          {yKeys.map(y=><Radar key={y.key} name={y.label} dataKey={y.key} stroke={y.color} fill={y.color} fillOpacity={0.10} strokeWidth={2} dot={{r:3,fill:y.color,strokeWidth:0}}/>)}
-          <Tooltip content={<DarkTip/>}/><Legend wrapperStyle={{fontSize:12,color:"#A8895C",paddingTop:14,fontFamily:"Instrument Sans,sans-serif"}}/>
+          <PolarAngleAxis 
+            dataKey={chart.angleKey || "metric"} 
+            tick={{fontSize:11,fill:T.t1,fontFamily:"Instrument Sans,sans-serif"}}
+          />
+          <PolarRadiusAxis tick={false} axisLine={false}/>
+          <Radar
+            name="Metrics"
+            dataKey={chart.valueKey || "value"}
+            stroke={T.chart[0]}
+            fill={T.chart[0]}
+            fillOpacity={0.10}
+            strokeWidth={2}
+            dot={{r:3,fill:T.chart[0],strokeWidth:0}}
+          />
+
+          <Tooltip content={<DarkTip/>}/>
+          <Legend wrapperStyle={{fontSize:12,color:"#A8895C",paddingTop:14,fontFamily:"Instrument Sans,sans-serif"}}/>
+
         </RadarChart>
       </ResponsiveContainer>
     );
@@ -395,19 +433,19 @@ function Pipeline({step}){
 // ─── SUMMARY BANNER ──────────────────────────────────────────────────────────
 function SummaryBanner({title,summary}){
   return(
-    <div style={{position:"relative",overflow:"hidden",background:T.bg2,border:`1px solid ${T.b2}`,borderRadius:16,padding:"20px 22px",animation:"fadeUp .4s ease both",boxShadow:`inset 0 1px 0 ${T.b2}`}}>
-      <div style={{position:"absolute",top:0,right:0,width:220,height:90,background:`radial-gradient(ellipse at top right,${T.a0}18,transparent)`,pointerEvents:"none"}}/>
+    <div style={{position:"relative",overflow:"hidden",background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,border:`1px solid ${T.b2}`,borderRadius:20,padding:"22px 24px",animation:"fadeUp .4s ease both",boxShadow:`0 18px 40px rgba(0,0,0,.18), inset 0 1px 0 ${T.b2}`}}>
+      <div style={{position:"absolute",top:0,right:0,width:240,height:110,background:`radial-gradient(ellipse at top right,${T.a0}16,transparent)`,pointerEvents:"none"}}/>
       <div style={{display:"flex",gap:14,alignItems:"flex-start",position:"relative"}}>
-        <div style={{width:38,height:38,borderRadius:11,background:`linear-gradient(135deg,${T.aBg2},${T.aBg})`,border:`1px solid ${T.a0}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <div style={{width:42,height:42,borderRadius:13,background:`linear-gradient(135deg,${T.aBg2},${T.aBg})`,border:`1px solid ${T.a0}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`inset 0 1px 0 ${T.a0}18`}}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polygon points="8,1 2,14 8,10.5 14,14" fill={T.a0} opacity="0.9"/></svg>
         </div>
         <div style={{flex:1}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
             <span style={{fontSize:10,color:T.a0,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.1em"}}>AI Summary · youtube_videos</span>
             <div style={{height:1,flex:1,background:`linear-gradient(90deg,${T.a0}44,transparent)`}}/>
           </div>
-          <h2 style={{margin:"0 0 6px",fontSize:17,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif"}}>{title}</h2>
-          <p style={{margin:0,fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>{summary}</p>
+          <h2 style={{margin:"0 0 8px",fontSize:19,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-0.02em"}}>{title}</h2>
+          <p style={{margin:0,fontSize:14,color:T.t1,lineHeight:1.75,fontFamily:"Instrument Sans,sans-serif",maxWidth:860}}>{summary}</p>
         </div>
       </div>
     </div>
@@ -432,7 +470,7 @@ function FollowUpPill({text,idx,onClick}){
   const[hov,setHov]=useState(false);
   return(
     <button onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:12,padding:"8px 14px",borderRadius:10,background:hov?T.aBg2:T.bg2,border:`1px solid ${hov?T.a0+"55":T.b1}`,color:hov?T.a1:T.t1,transition:"all .15s",fontFamily:"Instrument Sans,sans-serif",animation:`fadeUp .4s ease ${.35+idx*.06}s both`,boxShadow:hov?`0 4px 16px ${T.a0}22`:"none"}}>
+      style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:7,fontSize:12,padding:"10px 15px",borderRadius:12,background:hov?T.aBg2:T.bg2,border:`1px solid ${hov?T.a0+"55":T.b1}`,color:hov?T.a1:T.t1,transition:"all .15s",fontFamily:"Instrument Sans,sans-serif",animation:`fadeUp .4s ease ${.35+idx*.06}s both`,boxShadow:hov?`0 10px 18px rgba(0,0,0,.16)`:"inset 0 1px 0 rgba(255,255,255,.03)"}}>
       <span style={{width:5,height:5,borderRadius:"50%",background:hov?T.a0:T.t2,flexShrink:0,transition:"background .15s"}}/>
       {text}
       <span style={{fontSize:11,color:hov?T.a0:T.t2,transition:"color .15s",marginLeft:2}}>↗</span>
@@ -447,14 +485,14 @@ function DateRangePicker({value,onChange}){
   return(
     <div style={{position:"relative"}}>
       <button onClick={()=>setOpen(o=>!o)}
-        style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,background:T.bg2,border:`1px solid ${T.b1}`,fontSize:12,color:T.t1,fontFamily:"Instrument Sans,sans-serif",transition:"all .12s"}}
+        style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:7,padding:"7px 12px",borderRadius:10,background:T.bg2,border:`1px solid ${T.b1}`,fontSize:12,color:T.t1,fontFamily:"Instrument Sans,sans-serif",transition:"all .12s",boxShadow:`inset 0 1px 0 rgba(255,255,255,.03)`}}
         onMouseEnter={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.color=T.t0;}}
         onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b1;e.currentTarget.style.color=T.t1;}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         {cur.label} <span style={{fontSize:9}}>▾</span>
       </button>
       {open&&(
-        <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:T.bg3,border:`1px solid ${T.b2}`,borderRadius:10,padding:4,zIndex:100,minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,.5)"}}>
+        <div style={{position:"absolute",top:"calc(100% + 8px)",left:0,background:T.bg3,border:`1px solid ${T.b2}`,borderRadius:12,padding:5,zIndex:100,minWidth:148,boxShadow:"0 18px 36px rgba(0,0,0,.35)"}}>
           {DATE_RANGES.map(dr=>(
             <button key={dr.id} onClick={()=>{onChange(dr.id);setOpen(false);}}
               style={{all:"unset",cursor:"pointer",display:"block",width:"100%",padding:"7px 12px",borderRadius:7,fontSize:12,color:dr.id===value?T.a1:T.t1,background:dr.id===value?T.aBg:"transparent",fontFamily:"Instrument Sans,sans-serif",transition:"background .1s"}}
@@ -780,7 +818,7 @@ function AboutPage({onBack,onGetStarted}){
     <div ref={ref} style={{height:"100vh",overflowY:"auto",background:T.bg0,color:T.t0,fontFamily:"Instrument Sans,sans-serif"}}>
 
       {/* Navbar */}
-      <nav style={{position:"sticky",top:0,zIndex:100,height:60,display:"flex",alignItems:"center",padding:"0 60px",borderBottom:`1px solid ${scrolled?T.b1:"transparent"}`,background:scrolled?`${T.bg0}EE`:"transparent",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .25s"}}>
+      <nav style={{position:"sticky",top:0,zIndex:100,height:68,display:"flex",alignItems:"center",padding:"0 60px",borderBottom:`1px solid ${scrolled?T.b1:"transparent"}`,background:scrolled?`linear-gradient(180deg, ${T.bg0}F2, ${T.bg1}EA)`:"transparent",backdropFilter:scrolled?"blur(18px) saturate(120%)":"none",boxShadow:scrolled?"0 10px 30px rgba(0,0,0,.18)":"none",transition:"all .25s"}}>
         <button onClick={onBack} style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:8,marginRight:"auto"}}>
           <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${T.a0},#9A6518)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polygon points="8,1 2,14 8,10 14,14" fill={T.bg0} opacity=".95"/></svg>
@@ -1149,7 +1187,7 @@ const FEATURE_ICONS={
   },[]);
 
   return(
-    <div ref={ref} style={{height:"100vh",overflowY:"auto",background:T.bg0,color:T.t0,fontFamily:"Instrument Sans,sans-serif",position:"relative"}}>
+    <div ref={ref} style={{height:"100vh",overflowY:"auto",background:`radial-gradient(circle at top, ${T.bg2} 0%, ${T.bg0} 38%), ${T.bg0}`,color:T.t0,fontFamily:"Instrument Sans,sans-serif",position:"relative"}}>
 
       {/* ── Navbar ── */}
       <nav style={{position:"sticky",top:0,zIndex:100,height:60,display:"flex",alignItems:"center",padding:"0 60px",borderBottom:`1px solid ${scrolled?T.b1:"transparent"}`,background:scrolled?`${T.bg0}EE`:"transparent",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .25s"}}>
@@ -1172,63 +1210,64 @@ const FEATURE_ICONS={
             onMouseLeave={e=>e.currentTarget.style.color=T.t1}>About</button>
         </div>
         {/* Single CTA */}
-        <button onClick={onGetStarted} style={{all:"unset",cursor:"pointer",padding:"9px 22px",borderRadius:9,fontSize:13,fontWeight:600,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 4px 14px ${T.a0}44`,transition:"all .12s"}}
-          onMouseEnter={e=>e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`}
-          onMouseLeave={e=>e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`}>
+        <button onClick={onGetStarted} style={{all:"unset",cursor:"pointer",padding:"10px 22px",borderRadius:12,fontSize:13,fontWeight:600,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 10px 24px ${T.a0}33`,transition:"transform .15s, box-shadow .15s, background .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`;e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=`0 14px 28px ${T.a0}44`;}}
+          onMouseLeave={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`;e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=`0 10px 24px ${T.a0}33`;}}>
           Get started →
         </button>
       </nav>
 
       {/* ── Hero ── */}
-      <section style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 60px 60px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+      <section style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"88px 60px 72px",textAlign:"center",position:"relative",overflow:"hidden"}}>
         {/* bg glows */}
-        <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse 60% 50% at 50% 30%,${T.a0}12,transparent 65%)`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:0,left:"20%",width:300,height:300,borderRadius:"50%",background:`radial-gradient(circle,${T.green}0A,transparent 70%)`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:0,right:"15%",width:260,height:260,borderRadius:"50%",background:`radial-gradient(circle,#C97B6E0A,transparent 70%)`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse 60% 50% at 50% 30%,${T.a0}12,transparent 65%)`,pointerEvents:"none",animation:"aurora 14s ease-in-out infinite"}}/>
+        <div style={{position:"absolute",bottom:0,left:"20%",width:300,height:300,borderRadius:"50%",background:`radial-gradient(circle,${T.green}0A,transparent 70%)`,pointerEvents:"none",animation:"floatSlow 11s ease-in-out infinite"}}/>
+        <div style={{position:"absolute",bottom:0,right:"15%",width:260,height:260,borderRadius:"50%",background:`radial-gradient(circle,#C97B6E0A,transparent 70%)`,pointerEvents:"none",animation:"floatSlow 13s ease-in-out infinite reverse"}}/>
+        <div style={{position:"absolute",top:120,right:"12%",width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${T.a0}14,transparent 72%)`,filter:"blur(12px)",pointerEvents:"none",animation:"tiltGlow 16s ease-in-out infinite"}}/>
         {/* Grid */}
         <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${T.b0} 1px,transparent 1px),linear-gradient(90deg,${T.b0} 1px,transparent 1px)`,backgroundSize:"48px 48px",pointerEvents:"none",maskImage:"radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 100%)"}}/>
 
         {/* Badge */}
-        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"5px 14px",borderRadius:20,background:T.aBg,border:`1px solid ${T.a0}33`,marginBottom:24,animation:"fadeUp .5s ease both"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"7px 16px",borderRadius:999,background:`linear-gradient(180deg, ${T.aBg2}, ${T.aBg})`,border:`1px solid ${T.a0}33`,boxShadow:`inset 0 1px 0 rgba(255,255,255,.04)`,marginBottom:24,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) both"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:T.a0,boxShadow:`0 0 8px ${T.a0}`}}/>
-          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.06em"}}>Powered by Claude Sonnet · Built for YouTube Analytics</span>
+          <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.06em"}}> Built for Data Analytics</span>
         </div>
 
         {/* Headline */}
-        <h1 style={{margin:"0 0 20px",fontSize:"clamp(40px,6vw,72px)",fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-.04em",lineHeight:1.08,maxWidth:820,animation:"fadeUp .5s ease .1s both"}}>
-          Your YouTube data,<br/>
+        <h1 style={{margin:"0 0 20px",fontSize:"clamp(40px,6vw,76px)",fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-.04em",lineHeight:1.04,maxWidth:860,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .08s both"}}>
+          Your Complex Data,<br/>
           <span style={{color:T.a0,fontStyle:"italic"}}>in plain English.</span>
         </h1>
 
         {/* Sub */}
-        <p style={{margin:"0 0 44px",fontSize:"clamp(15px,1.8vw,18px)",color:T.t1,lineHeight:1.75,maxWidth:560,animation:"fadeUp .5s ease .2s both"}}>
+        <p style={{margin:"0 0 44px",fontSize:"clamp(15px,1.8vw,18px)",color:T.t1,lineHeight:1.8,maxWidth:620,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .16s both"}}>
           Ask any question about your analytics. Get an interactive dashboard with KPIs, charts, and AI insights — in under 5 seconds. No SQL. No code. No waiting.
         </p>
 
         {/* CTAs */}
-        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",justifyContent:"center",marginBottom:56,animation:"fadeUp .5s ease .3s both"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",justifyContent:"center",marginBottom:56,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .24s both"}}>
           <button onClick={onGetStarted}
-            style={{all:"unset",cursor:"pointer",padding:"14px 32px",borderRadius:13,fontSize:15,fontWeight:700,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 8px 28px ${T.a0}55`,transition:"all .15s",letterSpacing:"-.01em"}}
-            onMouseEnter={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`;e.currentTarget.style.boxShadow=`0 12px 36px ${T.a0}66`;}}
-            onMouseLeave={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`;e.currentTarget.style.boxShadow=`0 8px 28px ${T.a0}55`;}}>
+            style={{all:"unset",cursor:"pointer",padding:"15px 34px",borderRadius:15,fontSize:15,fontWeight:700,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 12px 30px ${T.a0}44`,transition:"transform .18s, box-shadow .18s, background .18s",letterSpacing:"-.01em"}}
+            onMouseEnter={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`;e.currentTarget.style.boxShadow=`0 18px 40px ${T.a0}55`;e.currentTarget.style.transform="translateY(-2px)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`;e.currentTarget.style.boxShadow=`0 12px 30px ${T.a0}44`;e.currentTarget.style.transform="translateY(0)";}}>
             Start for free →
           </button>
           <button onClick={onDemo}
-            style={{all:"unset",cursor:"pointer",padding:"14px 28px",borderRadius:13,fontSize:15,fontWeight:500,color:T.t0,border:`1px solid ${T.b2}`,background:T.bg2,fontFamily:"Instrument Sans,sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:8}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.a0+"55";e.currentTarget.style.background=T.bg3;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.background=T.bg2;}}>
+            style={{all:"unset",cursor:"pointer",padding:"15px 28px",borderRadius:15,fontSize:15,fontWeight:500,color:T.t0,border:`1px solid ${T.b2}`,background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,fontFamily:"Instrument Sans,sans-serif",transition:"transform .18s, border-color .18s, background .18s, box-shadow .18s",display:"flex",alignItems:"center",gap:8,boxShadow:`inset 0 1px 0 rgba(255,255,255,.03)`}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.a0+"55";e.currentTarget.style.background=`linear-gradient(180deg,${T.bg3},${T.bg2})`;e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=`0 14px 30px rgba(0,0,0,.18)`;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.background=`linear-gradient(180deg,${T.bg2},${T.bg3})`;e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=`inset 0 1px 0 rgba(255,255,255,.03)`;}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Live demo
           </button>
         </div>
 
         {/* ── Live social proof bar ── */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap",marginBottom:20,animation:"fadeUp .5s ease .35s both"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap",marginBottom:20,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .3s both"}}>
           <LiveCounter/>
         </div>
 
         {/* Stats row */}
-        <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",justifyContent:"center",animation:"fadeUp .5s ease .4s both"}}>
+        <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",justifyContent:"center",animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .36s both",padding:"14px 20px",borderRadius:24,background:"rgba(20,14,8,.42)",backdropFilter:"blur(12px)",border:`1px solid ${T.b0}`,boxShadow:`0 18px 36px rgba(0,0,0,.16)`}}>
           {STATS.map((s,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center"}}>
               <div style={{textAlign:"center",padding:"0 28px"}}>
@@ -1242,20 +1281,20 @@ const FEATURE_ICONS={
       </section>
 
       {/* ── Features ── */}
-      <section id="features" style={{padding:"80px 60px",maxWidth:1100,margin:"0 auto"}}>
+      <section id="features" style={{padding:"88px 60px",maxWidth:1100,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:52}}>
           <p style={{margin:"0 0 8px",fontSize:11,color:T.a0,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.1em"}}>Everything you need</p>
           <h2 style={{margin:"0 0 12px",fontSize:"clamp(28px,4vw,42px)",fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-.03em",lineHeight:1.15}}>Built for real analytics work</h2>
           <p style={{margin:0,fontSize:15,color:T.t1,lineHeight:1.7,maxWidth:480,marginLeft:"auto",marginRight:"auto"}}>Everything a data team needs — without any of the complexity.</p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
           {FEATURES_GRID.map((f,i)=>(
             <div key={i}
               onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}
-              style={{padding:"24px 24px 22px",borderRadius:16,background:hov===i?T.bg2:T.bg1,border:`1px solid ${hov===i?T.b2:T.b1}`,transition:"all .18s",cursor:"default",position:"relative",overflow:"hidden"}}>
+              style={{padding:"24px 24px 22px",borderRadius:20,background:hov===i?`linear-gradient(180deg,${T.bg2},${T.bg3})`:T.bg1,border:`1px solid ${hov===i?T.b2:T.b1}`,transition:"transform .2s, border-color .2s, box-shadow .2s, background .2s",cursor:"default",position:"relative",overflow:"hidden",boxShadow:hov===i?"0 18px 34px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04)":"inset 0 1px 0 rgba(255,255,255,.02)",transform:hov===i?"translateY(-4px)":"translateY(0)",animation:`riseIn .55s cubic-bezier(.16,1,.3,1) ${0.05*i}s both`}}>
               {/* top accent */}
               <div style={{position:"absolute",top:0,left:0,right:0,height:2,borderRadius:"16px 16px 0 0",background:hov===i?`linear-gradient(90deg,${T.a0},${T.green})`:`linear-gradient(90deg,${T.b1},transparent)`,transition:"all .2s"}}/>
-              <div style={{width:40,height:40,borderRadius:11,background:T.aBg,border:`1px solid ${T.a0}22`,display:"flex",alignItems:"center",justifyContent:"center",color:T.a0,marginBottom:14}}>{FEATURE_ICONS[f.iconKey]}</div>
+              <div style={{width:42,height:42,borderRadius:13,background:hov===i?T.aBg2:T.aBg,border:`1px solid ${T.a0}22`,display:"flex",alignItems:"center",justifyContent:"center",color:T.a0,marginBottom:14,boxShadow:hov===i?`0 10px 24px ${T.a0}18`:"none",transition:"all .18s"}}>{FEATURE_ICONS[f.iconKey]}</div>
               <p style={{margin:"0 0 6px",fontSize:14,fontWeight:600,color:T.t0,fontFamily:"Playfair Display,serif"}}>{f.title}</p>
               <p style={{margin:0,fontSize:13,color:T.t2,lineHeight:1.65,fontFamily:"Instrument Sans,sans-serif"}}>{f.desc}</p>
             </div>
@@ -1264,7 +1303,7 @@ const FEATURE_ICONS={
       </section>
 
       {/* ── How it works ── */}
-      <section id="how-it-works" style={{padding:"80px 60px",background:T.bg1,borderTop:`1px solid ${T.b0}`,borderBottom:`1px solid ${T.b0}`}}>
+      <section id="how-it-works" style={{padding:"88px 60px",background:`linear-gradient(180deg, ${T.bg1}, ${T.bg0})`,borderTop:`1px solid ${T.b0}`,borderBottom:`1px solid ${T.b0}`}}>
         <div style={{maxWidth:900,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:52}}>
             <p style={{margin:"0 0 8px",fontSize:11,color:T.a0,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.1em"}}>How it works</p>
@@ -1276,7 +1315,7 @@ const FEATURE_ICONS={
                 {i<STEPS_HOW.length-1&&(
                   <div style={{position:"absolute",top:22,left:"calc(100% - 10px)",width:"calc(100% - 20px)",height:1,background:`linear-gradient(90deg,${T.a0}44,transparent)`,zIndex:0}}/>
                 )}
-                <div style={{position:"relative",zIndex:1,padding:"24px",borderRadius:16,background:T.bg2,border:`1px solid ${T.b1}`}}>
+                <div style={{position:"relative",zIndex:1,padding:"24px",borderRadius:18,background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,border:`1px solid ${T.b1}`,boxShadow:`0 16px 30px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.04)`,animation:`riseIn .55s cubic-bezier(.16,1,.3,1) ${0.08*i}s both`}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                     <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.a0},#9A6518)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       <span style={{fontSize:12,fontWeight:700,color:T.bg0,fontFamily:"JetBrains Mono,monospace"}}>{s.n}</span>
@@ -1292,8 +1331,8 @@ const FEATURE_ICONS={
       </section>
 
       {/* ── Demo CTA section ── */}
-      <section id="demo" style={{padding:"80px 60px",textAlign:"center"}}>
-        <div style={{maxWidth:640,margin:"0 auto"}}>
+      <section id="demo" style={{padding:"88px 60px",textAlign:"center"}}>
+        <div style={{maxWidth:700,margin:"0 auto",padding:"34px 30px",borderRadius:26,background:`linear-gradient(180deg, rgba(34,24,12,.92), rgba(23,17,8,.95))`,border:`1px solid ${T.b1}`,boxShadow:`0 24px 50px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04)`}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"5px 14px",borderRadius:20,background:T.greenBg,border:`1px solid ${T.green}33`,marginBottom:20}}>
             <div style={{width:6,height:6,borderRadius:"50%",background:T.green,boxShadow:`0 0 8px ${T.green}`}}/>
             <span style={{fontSize:11,color:T.green,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.06em"}}>No account required</span>
@@ -1306,16 +1345,16 @@ const FEATURE_ICONS={
           </p>
           <div style={{display:"flex",alignItems:"center",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
             <button onClick={onDemo}
-              style={{all:"unset",cursor:"pointer",padding:"14px 32px",borderRadius:13,fontSize:15,fontWeight:700,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 8px 28px ${T.a0}55`,transition:"all .15s",display:"flex",alignItems:"center",gap:8}}
-              onMouseEnter={e=>e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`}
-              onMouseLeave={e=>e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`}>
+              style={{all:"unset",cursor:"pointer",padding:"14px 32px",borderRadius:15,fontSize:15,fontWeight:700,color:T.bg0,background:`linear-gradient(135deg,${T.a0},#B8882E)`,fontFamily:"Playfair Display,serif",boxShadow:`0 12px 30px ${T.a0}44`,transition:"transform .18s, box-shadow .18s, background .18s",display:"flex",alignItems:"center",gap:8}}
+              onMouseEnter={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a1},${T.a0})`;e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=`0 18px 38px ${T.a0}55`;}}
+              onMouseLeave={e=>{e.currentTarget.style.background=`linear-gradient(135deg,${T.a0},#B8882E)`;e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=`0 12px 30px ${T.a0}44`;}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               Launch live demo
             </button>
             <button onClick={onGetStarted}
-              style={{all:"unset",cursor:"pointer",padding:"14px 28px",borderRadius:13,fontSize:15,color:T.t1,border:`1px solid ${T.b2}`,fontFamily:"Instrument Sans,sans-serif",transition:"all .15s"}}
-              onMouseEnter={e=>{e.currentTarget.style.color=T.t0;e.currentTarget.style.borderColor=T.b3;}}
-              onMouseLeave={e=>{e.currentTarget.style.color=T.t1;e.currentTarget.style.borderColor=T.b2;}}>
+              style={{all:"unset",cursor:"pointer",padding:"14px 28px",borderRadius:15,fontSize:15,color:T.t1,border:`1px solid ${T.b2}`,fontFamily:"Instrument Sans,sans-serif",transition:"transform .18s, color .18s, border-color .18s, background .18s"}}
+              onMouseEnter={e=>{e.currentTarget.style.color=T.t0;e.currentTarget.style.borderColor=T.b3;e.currentTarget.style.background=T.bg2;e.currentTarget.style.transform="translateY(-2px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.color=T.t1;e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.background="transparent";e.currentTarget.style.transform="translateY(0)";}}>
               Create free account
             </button>
           </div>
@@ -1593,17 +1632,17 @@ function AuthScreen({onAuth}){
   });
 
   return(
-    <div style={{display:"flex",height:"100vh",background:T.bg0,fontFamily:"Instrument Sans,sans-serif",overflow:"hidden"}}>
+    <div style={{display:"flex",height:"100vh",background:`radial-gradient(circle at top left, ${T.bg2} 0%, ${T.bg0} 32%), ${T.bg0}`,fontFamily:"Instrument Sans,sans-serif",overflow:"hidden"}}>
 
       {/* ══ LEFT — immersive hero ══ */}
-      <div style={{flex:1,position:"relative",overflow:"hidden",borderRight:`1px solid ${T.b0}`}}>
+      <div style={{flex:1,position:"relative",overflow:"hidden",borderRight:`1px solid ${T.b0}`,background:`linear-gradient(180deg, ${T.bg0}, ${T.bg1})`}}>
 
         {/* Deep layered background glows */}
         <div style={{position:"absolute",inset:0,background:`
           radial-gradient(ellipse 70% 60% at 20% 20%, ${T.a0}18 0%, transparent 60%),
           radial-gradient(ellipse 50% 40% at 80% 80%, ${T.green}10 0%, transparent 60%),
           radial-gradient(ellipse 40% 50% at 60% 10%, #C97B6E18 0%, transparent 50%)
-        `,pointerEvents:"none"}}/>
+        `,pointerEvents:"none",animation:"aurora 16s ease-in-out infinite"}}/>
 
         {/* Subtle grid texture */}
         <div style={{position:"absolute",inset:0,backgroundImage:`
@@ -1613,9 +1652,11 @@ function AuthScreen({onAuth}){
 
         {/* Central hero content — scrollable */}
         <div style={{position:"absolute",inset:0,overflowY:"auto",padding:"52px 56px 52px",display:"flex",flexDirection:"column",gap:0}}>
+          <div style={{position:"absolute",top:110,right:70,width:220,height:220,borderRadius:"50%",background:`radial-gradient(circle, ${T.a0}12, transparent 72%)`,filter:"blur(10px)",pointerEvents:"none",animation:"floatSlow 14s ease-in-out infinite"}}/>
+          <div style={{position:"absolute",bottom:100,left:40,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle, ${T.green}12, transparent 72%)`,filter:"blur(14px)",pointerEvents:"none",animation:"floatSlow 17s ease-in-out infinite reverse"}}/>
 
           {/* Logo */}
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:36,flexShrink:0,animation:"fadeUp .5s ease both"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:36,flexShrink:0,animation:"riseIn .55s cubic-bezier(.16,1,.3,1) both"}}>
             <div style={{width:44,height:44,borderRadius:13,background:`linear-gradient(135deg,${T.a0},#9A6518)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 0 0 1px ${T.a0}44, 0 8px 32px ${T.a0}55`}}>
               <svg width="22" height="22" viewBox="0 0 16 16" fill="none"><polygon points="8,1 2,14 8,10 14,14" fill={T.bg0} opacity="0.95"/></svg>
             </div>
@@ -1626,28 +1667,28 @@ function AuthScreen({onAuth}){
           </div>
 
           {/* Headline */}
-          <h1 style={{margin:"0 0 14px",fontSize:46,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-0.04em",lineHeight:1.1,animation:"fadeUp .5s ease .1s both",flexShrink:0}}>
+          <h1 style={{margin:"0 0 14px",fontSize:48,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-0.04em",lineHeight:1.06,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) .08s both",flexShrink:0}}>
             Your data,<br/>
             <span style={{color:T.a0,fontStyle:"italic"}}>in plain English.</span>
           </h1>
 
-          <p style={{margin:"0 0 28px",fontSize:15,color:T.t1,lineHeight:1.75,maxWidth:400,animation:"fadeUp .5s ease .2s both",flexShrink:0}}>
+          <p style={{margin:"0 0 28px",fontSize:15,color:T.t1,lineHeight:1.8,maxWidth:420,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) .14s both",flexShrink:0}}>
             Ask any question about your YouTube analytics. Get instant interactive dashboards powered by AI — no SQL required.
           </p>
 
           {/* Feature pills */}
-          <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:28,animation:"fadeUp .5s ease .3s both",flexShrink:0}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:28,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) .2s both",flexShrink:0}}>
             {["AI dashboards","Voice queries","Anomaly detection","Scheduled reports","Export & share","NL alerts"].map((f,i)=>(
-              <span key={i} onClick={()=>onDone()} style={{cursor:"pointer",fontSize:11,color:T.a1,background:T.aBg,border:`1px solid ${T.a0}22`,padding:"4px 11px",borderRadius:20,fontFamily:"Instrument Sans,sans-serif",fontWeight:500,transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.background=T.a0+"22";e.currentTarget.style.color=T.a0;}}
-                onMouseLeave={e=>{e.currentTarget.style.background=T.aBg; e.currentTarget.style.color=T.a1;}}>
+              <span key={i} style={{cursor:"default",fontSize:11,color:T.a1,background:`linear-gradient(180deg, ${T.aBg2}, ${T.aBg})`,border:`1px solid ${T.a0}22`,padding:"5px 12px",borderRadius:999,fontFamily:"Instrument Sans,sans-serif",fontWeight:500,transition:"all .15s",boxShadow:`inset 0 1px 0 rgba(255,255,255,.04)`}}
+                onMouseEnter={e=>{e.currentTarget.style.background=T.a0+"22";e.currentTarget.style.color=T.a0;e.currentTarget.style.transform="translateY(-1px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background=`linear-gradient(180deg, ${T.aBg2}, ${T.aBg})`; e.currentTarget.style.color=T.a1;e.currentTarget.style.transform="translateY(0)";}}>
                 {f}
               </span>
             ))}
           </div>
 
           {/* Testimonials */}
-          <div style={{marginBottom:28,flexShrink:0}}>
+          <div style={{marginBottom:28,flexShrink:0,animation:"riseIn .6s cubic-bezier(.16,1,.3,1) .28s both"}}>
             <ReviewCarousel darkMode={true}/>
           </div>
 
@@ -1655,7 +1696,7 @@ function AuthScreen({onAuth}){
           <div style={{height:1,background:`linear-gradient(90deg,transparent,${T.b1},transparent)`,marginBottom:28,flexShrink:0}}/>
 
           {/* About the developers */}
-          <div style={{flexShrink:0,animation:"fadeUp .5s ease .5s both"}}>
+          <div style={{flexShrink:0,animation:"riseIn .65s cubic-bezier(.16,1,.3,1) .34s both"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
               <span style={{fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.1em"}}>About the developers</span>
               <div style={{height:1,flex:1,background:`linear-gradient(90deg,${T.b2},transparent)`}}/>
@@ -1663,13 +1704,13 @@ function AuthScreen({onAuth}){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               {[
                 {initials:"KH",name:"Kaushiki Halder",role:"Frontend UI/UX Engine",color:"#F29F05",grad:"linear-gradient(135deg,#F29F05,#E0BB3A)"},
-                {initials:"SN",name:"Swagato Naskar",role:"Backend API Architect",color:"#1B9CAF",grad:"linear-gradient(135deg,#1B9CAF,#5AC2EA)"},
-                {initials:"SM",name:"Sohom Kumar Mandal",role:"Chart Runtime Orchestrator + Backend",color:"#AC5EC4",grad:"linear-gradient(135deg,#AC5EC4,#A971D4)"},
+                {initials:"SN",name:"Swagato Naskar",role:"Backend Architect",color:"#1B9CAF",grad:"linear-gradient(135deg,#1B9CAF,#5AC2EA)"},
+                {initials:"SM",name:"Sohom Kumar Mandal",role:"Backend Architect",color:"#AC5EC4",grad:"linear-gradient(135deg,#AC5EC4,#A971D4)"},
                 {initials:"NC",name:"Norris the Cat",role:"Emotional Support",color:"#F25A7A",grad:"linear-gradient(135deg,#F25A7A,#FFB2D6)"},
               ].map((d,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:11,background:T.bg2,border:`1px solid ${T.b1}`,transition:"border-color .15s"}}
-                  onMouseEnter={e=>e.currentTarget.style.borderColor=d.color+"44"}
-                  onMouseLeave={e=>e.currentTarget.style.borderColor=T.b1}>
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:14,background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,border:`1px solid ${T.b1}`,transition:"border-color .15s, transform .15s, box-shadow .15s",boxShadow:`inset 0 1px 0 rgba(255,255,255,.03)`}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=d.color+"44";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 12px 24px rgba(0,0,0,.14)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b1;e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=`inset 0 1px 0 rgba(255,255,255,.03)`;}}>
                   <div style={{width:32,height:32,borderRadius:"50%",background:d.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:T.bg0,flexShrink:0}}>
                     {d.initials}
                   </div>
@@ -1680,7 +1721,7 @@ function AuthScreen({onAuth}){
                 </div>
               ))}
             </div>
-            <div style={{padding:"12px 16px",borderRadius:12,background:T.bg2,border:`1px solid ${T.b1}`}}>
+            <div style={{padding:"14px 16px",borderRadius:16,background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,border:`1px solid ${T.b1}`,boxShadow:`0 14px 28px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.03)`}}>
               <p style={{margin:"0 0 6px",fontSize:12,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>
                 DataIntel was built to make data analysis accessible to everyone — not just data scientists. We believe insights should be a conversation, not a query.
               </p>
@@ -1928,7 +1969,7 @@ function InputBar({
   const placeholder =
     chatMode==="continue" && hasHistory
       ? "Ask a follow-up question…"
-      : "Ask anything about your YouTube data…";
+      : "Ask anything about your data…";
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1991,16 +2032,16 @@ function InputBar({
 
       {/* Input container */}
       <div style={{
-        background:T.bg2,
-        borderRadius:16,
+        background:`linear-gradient(180deg,${T.bg2},${T.bg3})`,
+        borderRadius:20,
         border:`1px solid ${
           focus
             ? (chatMode==="continue" ? T.a0+"99" : T.b3)
             : T.b2
         }`,
         boxShadow:focus
-          ? `0 0 0 3px ${chatMode==="continue"?T.aRing:"rgba(212,168,84,0.15)"},0 4px 24px rgba(0,0,0,.4)`
-          : "0 2px 16px rgba(0,0,0,.35)",
+          ? `0 0 0 3px ${chatMode==="continue"?T.aRing:"rgba(212,168,84,0.15)"},0 16px 36px rgba(0,0,0,.24)`
+          : "0 12px 28px rgba(0,0,0,.18)",
         transition:"border-color .2s,box-shadow .2s",
         overflow:"hidden"
       }}>
@@ -2016,7 +2057,7 @@ function InputBar({
           display:"flex",
           gap:0,
           alignItems:"flex-end",
-          padding:"4px 4px 4px 16px"
+          padding:"6px 6px 6px 18px"
         }}>
 
           {/* Status dot */}
@@ -2082,20 +2123,20 @@ function InputBar({
               display:"flex",
               alignItems:"center",
               gap:7,
-              margin:"6px 6px 6px 2px",
+              margin:"8px 8px 8px 4px",
               padding:"10px 18px",
-              borderRadius:12,
+              borderRadius:14,
               fontSize:13,
               fontWeight:600,
               fontFamily:"Playfair Display,serif",
               background:value.trim()&&!loading
-                ? `linear-gradient(135deg,${T.a0},${T.a0}BB)`
+                ? `linear-gradient(135deg,${T.a0},#C79233)`
                 : T.bg4,
               color:value.trim()&&!loading?T.bg0:T.t2,
               transition:"all .15s",
               flexShrink:0,
               boxShadow:value.trim()&&!loading
-                ? `0 4px 16px ${T.a0}44`
+                ? `0 10px 20px ${T.a0}2A`
                 : "none"
             }}
           >
@@ -2170,61 +2211,55 @@ function InputBar({
 }
 
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDeleteSaved,alerts,onAddAlert,onDeleteAlert,schedule,onSaveSchedule,uploadedDatasets,onLoadUploadedDataset,onToast,schema}){
-  if(activeTab === "schema"){
-            console.log("Rendering schema:", schema);
-          }
-  const[csvDelimiter,setCsvDelimiter]=useState(",");
-  const[csvHasHeader,setCsvHasHeader]=useState(true);
+function Sidebar({activeTab,onTab,qHistory,onHistoryClick,alerts,onAddAlert,onDeleteAlert,schedule,onSaveSchedule,uploadedDatasets,onLoadUploadedDataset,onToast,schema,onUploadCsv}){
   const[uploadedData,setUploadedData]=useState(null);
 
   const navItems=[
     {id:"dash",label:"Dashboard",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>},
-    {id:"saved",label:"Saved",badge:saved.length,icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>},
     {id:"hist",label:"History",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>},
     {id:"schema",label:"Schema",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/></svg>},
     {id:"alerts",label:"Alerts",badge:alerts.length,icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>},
     {id:"schedule",label:"Reports",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>},
     {id:"db",label:"Database",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>},
   ];
+  const sectionLabelStyle={margin:"0 0 10px 12px",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.12em"};
   return(
-    <div style={{width:224,flexShrink:0,background:T.bg1,borderRight:`1px solid ${T.b0}`,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${T.b0}`,display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:32,height:32,borderRadius:10,background:`linear-gradient(135deg,${T.a0},#B8882E)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 16px ${T.a0}44`}}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polygon points="8,1 2,14 8,10 14,14" fill={T.bg0} opacity="0.95"/></svg>
+    <div style={{width:252,flexShrink:0,background:`linear-gradient(180deg,${T.bg1} 0%,${T.bg0} 100%)`,borderRight:`1px solid ${T.b0}`,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:`inset -1px 0 0 ${T.b0}`}}>
+      <div style={{padding:"20px 18px 16px",borderBottom:`1px solid ${T.b0}`,display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:38,height:38,borderRadius:12,background:`linear-gradient(135deg,${T.a0},#C79233)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 8px 18px ${T.a0}2A,inset 0 1px 0 rgba(255,255,255,.1)`}}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polygon points="8,1 2,14 8,10 14,14" fill={T.bg0} opacity="0.96"/></svg>
         </div>
-        <div>
-          <p style={{margin:0,fontSize:14,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif"}}>DataIntel</p>
-          <p style={{margin:0,fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>YouTube Analytics</p>
+        <div style={{minWidth:0}}>
+          <p style={{margin:0,fontSize:16,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",letterSpacing:"-0.02em",lineHeight:1.1}}>DataIntel</p>
+          <p style={{margin:"4px 0 0",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.08em"}}>YouTube Analytics</p>
         </div>
       </div>
-      <div style={{padding:"10px 10px 0"}}>
+      <div style={{padding:"14px 12px 0"}}>
         {navItems.map(({id,label,icon,badge})=>{
           const active=activeTab===id;
           return(
             <button key={id} onClick={()=>onTab(id)}
-              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:10,width:"100%",padding:"8px 12px",borderRadius:10,fontSize:13,fontWeight:active?600:400,color:active?T.a1:T.t1,background:active?T.aBg:"transparent",border:`1px solid ${active?T.a0+"33":"transparent"}`,transition:"all .15s",marginBottom:2,fontFamily:"Instrument Sans,sans-serif"}}
-              onMouseEnter={e=>!active&&(e.currentTarget.style.background=T.bg3)}
-              onMouseLeave={e=>!active&&(e.currentTarget.style.background="transparent")}>
-              <span style={{color:active?T.a0:T.t2,transition:"color .15s"}}>{icon}</span>
-              {label}
-              {badge>0&&<span style={{marginLeft:"auto",fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:20,background:T.aBg,color:T.a0,fontFamily:"JetBrains Mono,monospace"}}>{badge}</span>}
-              {active&&!badge&&<div style={{marginLeft:"auto",width:5,height:5,borderRadius:"50%",background:T.a0}}/>}
+              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:12,width:"calc(100% - 20px)",alignSelf:"center",padding:"7px 12px",borderRadius:12,fontSize:14,fontWeight:active?600:500,color:active?T.t0:T.t1,background:active?`linear-gradient(180deg,${T.aBg},${T.aBg2})`:"transparent",border:`1px solid ${active?T.a0+"30":"transparent"}`,boxShadow:active?`inset 0 1px 0 ${T.a0}14`:"none",transition:"all .16s ease",marginBottom:6,fontFamily:"Instrument Sans,sans-serif"}}
+              onMouseEnter={e=>{if(!active){e.currentTarget.style.background=T.bg2;e.currentTarget.style.borderColor=T.b1;}}}
+              onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="transparent";}}}>
+              <span style={{width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",color:active?T.a0:T.t2,transition:"color .15s",flexShrink:0}}>{icon}</span>
+              <span style={{flex:1,textAlign:"left"}}>{label}</span>
+              {badge>0&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,padding:"3px 7px",borderRadius:999,background:active?`${T.a0}22`:T.bg2,color:active?T.a1:T.t2,fontFamily:"JetBrains Mono,monospace",border:`1px solid ${active?T.a0+"30":T.b1}`}}>{badge}</span>}
+              {active&&!badge&&<div style={{marginLeft:"auto",width:6,height:6,borderRadius:"50%",background:T.a0}}/>}
             </button>
           );
         })}
       </div>
-      <div style={{flex:1,overflowY:"auto",padding:"12px 10px"}}>
-        {activeTab==="saved"&&<SavedPanel saved={saved} onLoad={onLoadSaved} onDelete={onDeleteSaved}/>}
+      <div style={{flex:1,overflowY:"auto",padding:"18px 12px 14px"}}>
         {activeTab==="hist"&&(
           <div>
-            <p style={{margin:"0 0 8px 8px",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.08em"}}>Recent queries</p>
-            {qHistory.length===0?<p style={{fontSize:12,color:T.t2,padding:"8px 10px",fontFamily:"Instrument Sans,sans-serif"}}>No queries yet</p>
+            <p style={sectionLabelStyle}>Recent queries</p>
+            {qHistory.length===0?<p style={{fontSize:12,color:T.t2,padding:"10px 12px",fontFamily:"Instrument Sans,sans-serif",lineHeight:1.5}}>No queries yet</p>
               :qHistory.map((h,i)=>(
                 <button key={i} onClick={()=>onHistoryClick(h.q)}
-                  style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:8,width:"100%",padding:"8px 10px",borderRadius:9,fontSize:12,color:T.t1,lineHeight:1.4,transition:"background .1s",marginBottom:2,fontFamily:"Instrument Sans,sans-serif"}}
-                  onMouseEnter={e=>e.currentTarget.style.background=T.bg3}
-                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:10,width:"100%",padding:"10px 12px",borderRadius:12,fontSize:12,color:T.t1,lineHeight:1.45,transition:"background .12s,border-color .12s",marginBottom:4,fontFamily:"Instrument Sans,sans-serif",background:T.bg1,border:`1px solid ${T.b0}`}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=T.bg2;e.currentTarget.style.borderColor=T.b1;}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=T.bg1;e.currentTarget.style.borderColor=T.b0;}}>
                   <span style={{color:h.mode==="continue"?T.a0:T.t2,fontSize:10,marginTop:2,flexShrink:0}}>{h.mode==="continue"?"↻":"›"}</span>
                   <span style={{overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",flex:1}}>{h.q}</span>
                   {h.mode==="continue"&&<span style={{fontSize:8,padding:"1px 5px",borderRadius:4,background:T.aBg,color:T.a0,fontFamily:"JetBrains Mono,monospace",flexShrink:0,marginTop:2}}>+ctx</span>}
@@ -2235,28 +2270,20 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
         )}
         {activeTab==="schema"&&(
           <div>
-            <p style={{
-              margin:"0 0 8px 8px",
-              fontSize:10,
-              color:T.t2,
-              fontFamily:"JetBrains Mono,monospace",
-              textTransform:"uppercase",
-              letterSpacing:"0.08em"
-            }}>
-              Data Schema
-            </p>
+            <p style={sectionLabelStyle}>Data Schema</p>
 
             {!schema && (
               <div style={{
-                padding:"10px",
-                borderRadius:10,
-                background:T.bg3,
+                padding:"12px",
+                borderRadius:14,
+                background:T.bg2,
                 border:`1px solid ${T.b1}`
               }}>
                 <span style={{
-                  fontSize:11,
+                  fontSize:12,
                   color:T.t2,
-                  fontFamily:"Instrument Sans,sans-serif"
+                  fontFamily:"Instrument Sans,sans-serif",
+                  lineHeight:1.5
                 }}>
                   No database connected
                 </span>
@@ -2265,13 +2292,13 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
 
             {schema && (
               <div style={{
-                padding:"10px",
-                borderRadius:10,
-                background:T.bg3,
+                padding:"12px",
+                borderRadius:14,
+                background:T.bg2,
                 border:`1px solid ${T.b1}`
               }}>
 
-                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                   <div style={{
                     width:7,
                     height:7,
@@ -2281,7 +2308,7 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
                   }}/>
 
                   <span style={{
-                    fontSize:11,
+                    fontSize:12,
                     fontWeight:600,
                     color:T.t0,
                     fontFamily:"Instrument Sans,sans-serif"
@@ -2291,12 +2318,12 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
 
                   <span style={{
                     marginLeft:"auto",
-                    fontSize:9,
+                    fontSize:10,
                     fontFamily:"JetBrains Mono,monospace",
                     color:T.green,
                     background:T.greenBg,
-                    padding:"1px 6px",
-                    borderRadius:4
+                    padding:"3px 7px",
+                    borderRadius:999
                   }}>
                     {Object.keys(schema.columns).length} cols
                   </span>
@@ -2306,8 +2333,8 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
                   <div key={name} style={{
                     display:"flex",
                     alignItems:"baseline",
-                    gap:6,
-                    padding:"3px 0",
+                    gap:8,
+                    padding:"5px 0",
                     borderBottom:`1px solid ${T.b0}`
                   }}>
                     <span style={{
@@ -2323,7 +2350,7 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
                     </span>
 
                     <span style={{
-                      fontSize:9,
+                      fontSize:10,
                       color:T.t2,
                       fontFamily:"JetBrains Mono,monospace",
                       flexShrink:0
@@ -2332,7 +2359,7 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
                     </span>
 
                     <span style={{
-                      fontSize:9,
+                      fontSize:10,
                       color:T.green,
                       fontFamily:"JetBrains Mono,monospace",
                       flexShrink:0
@@ -2352,56 +2379,58 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
         {activeTab==="schedule"&&<SchedulePanel schedule={schedule} onSave={onSaveSchedule}/>}
         {activeTab==="db"&&(
           <div>
-            <p style={{margin:"0 0 8px 8px",fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",textTransform:"uppercase",letterSpacing:"0.08em"}}>Uploaded Datasets</p>
-           {!schema?.columns
-            ?<p style={{
+            <p style={sectionLabelStyle}>Uploaded Datasets</p>
+            {!schema?.columns
+              ?<p style={{
                 fontSize:12,
                 color:T.t2,
-                padding:"8px 10px",
-                fontFamily:"Instrument Sans,sans-serif"
+                padding:"10px 12px",
+                fontFamily:"Instrument Sans,sans-serif",
+                lineHeight:1.5
               }}>
                 No database connected. Upload a CSV to begin.
-            </p>
+              </p>
+              :(
+                <div style={{
+                  padding:"10px 12px",
+                  borderRadius:12,
+                  background:T.bg2,
+                  border:`1px solid ${T.b1}`,
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"space-between"
+                }}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{
+                      width:6,
+                      height:6,
+                      borderRadius:"50%",
+                      background:T.green
+                    }}/>
+                    <span style={{
+                      fontSize:12,
+                      color:T.green,
+                      fontFamily:"Instrument Sans,sans-serif",
+                      fontWeight:500
+                    }}>
+                      Database connected
+                    </span>
+                  </div>
 
-            :(
-              <div style={{
-                padding:"8px 10px",
-                borderRadius:9,
-                background:T.bg3,
-                border:`1px solid ${T.b1}`,
-                display:"flex",
-                alignItems:"center",
-                justifyContent:"space-between"
-              }}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{
-                    width:6,
-                    height:6,
-                    borderRadius:"50%",
-                    background:T.green
-                  }}/>
                   <span style={{
-                    fontSize:12,
-                    color:T.green,
-                    fontFamily:"Instrument Sans,sans-serif"
+                    fontSize:10,
+                    color:T.t2,
+                    fontFamily:"JetBrains Mono,monospace"
                   }}>
-                    Database connected
+                    {Object.keys(schema.columns).length} columns
                   </span>
                 </div>
-
-                <span style={{
-                  fontSize:10,
-                  color:T.t2,
-                  fontFamily:"JetBrains Mono,monospace"
-                }}>
-                  {Object.keys(schema.columns).length} columns
-                </span>
-              </div>
-          )}
+              )
+            }
             {uploadedData&&(
-              <div style={{marginTop:12,padding:10,border:`1px solid ${T.b1}`,borderRadius:10,background:T.bg3}}>
-                <p style={{margin:"0 0 8px",fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>Dataset preview: {uploadedData.headers.join(", ")}</p>
-                <div style={{maxHeight:180,overflowX:"auto",overflowY:"auto",background:T.bg0,border:`1px solid ${T.b0}`,borderRadius:8}}>
+              <div style={{marginTop:14,padding:12,border:`1px solid ${T.b1}`,borderRadius:14,background:T.bg2}}>
+                <p style={{margin:"0 0 10px",fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace",lineHeight:1.5}}>Dataset preview: {uploadedData.headers.join(", ")}</p>
+                <div style={{maxHeight:180,overflowX:"auto",overflowY:"auto",background:T.bg0,border:`1px solid ${T.b0}`,borderRadius:10}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,fontFamily:"JetBrains Mono,monospace"}}>
                     <thead>
                       <tr>
@@ -2426,10 +2455,25 @@ function Sidebar({activeTab,onTab,qHistory,onHistoryClick,saved,onLoadSaved,onDe
           </div>
         )}
       </div>
-      <div style={{padding:"10px",borderTop:`1px solid ${T.b0}`}}>
+      <div style={{padding:"14px 12px 16px",borderTop:`1px solid ${T.b0}`,display:"flex",flexDirection:"column",gap:10,background:`linear-gradient(180deg,rgba(0,0,0,0),${T.bg1})`}}>
+        <button onClick={onUploadCsv}
+          style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:10,width:"calc(100% - 10px)",alignSelf:"center",padding:"10px 11px",borderRadius:12,background:T.bg2,border:`1px solid ${T.b1}`,transition:"all .16s",overflow:"hidden"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.a0+"4A";e.currentTarget.style.background=T.bg3;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b1;e.currentTarget.style.background=T.bg2;}}>
+          <div style={{width:34,height:34,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",background:T.aBg,border:`1px solid ${T.a0}22`,color:T.a0,flexShrink:0}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M12 21v-8"/></svg>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",minWidth:0,flex:1}}>
+            <span style={{fontSize:12,fontWeight:600,color:T.t0,fontFamily:"Instrument Sans,sans-serif",lineHeight:1.15}}>Upload CSV</span>
+            <span style={{fontSize:10,color:T.t2,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.04em"}}>Import local data</span>
+          </div>
+          <span style={{fontSize:10,fontWeight:700,color:T.a1,fontFamily:"JetBrains Mono,monospace",letterSpacing:"0.03em",flexShrink:0}}>
+            Choose
+          </span>
+        </button>
         {[{label:"Settings",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}].map(({label,icon})=>(
-          <button key={label} style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:9,width:"100%",padding:"7px 10px",borderRadius:8,fontSize:12,color:T.t2,fontFamily:"Instrument Sans,sans-serif",transition:"all .1s"}}
-            onMouseEnter={e=>{e.currentTarget.style.background=T.bg3;e.currentTarget.style.color=T.t1;}}
+          <button key={label} style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 11px",borderRadius:12,fontSize:12,color:T.t2,fontFamily:"Instrument Sans,sans-serif",transition:"all .12s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background=T.bg2;e.currentTarget.style.color=T.t1;}}
             onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.t2;}}
           >{icon} {label}</button>
         ))}
@@ -2491,7 +2535,13 @@ function Topbar({title,onNew,onToggle,onSave,onShare,onExport,hasResult,dateRang
             <span style={{fontSize:11,color:T.t0,fontFamily:"Instrument Sans,sans-serif",fontWeight:500,lineHeight:1.2}}>{user.guest?"Guest":user.name||user.email}</span>
             {user.guest&&<span style={{fontSize:9,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>guest mode</span>}
           </div>
-          <button onClick={onSignOut} title="Sign out"
+          <button onClick={() => {
+            console.log("logout clicked");
+            localStorage.removeItem("token");
+            setUser(null);
+            setShowLanding(true);
+            }} 
+            title="Sign out"
             style={{all:"unset",cursor:"pointer",width:26,height:26,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",color:T.t2,transition:"all .12s"}}
             onMouseEnter={e=>{e.currentTarget.style.background=T.bg3;e.currentTarget.style.color=T.red;}}
             onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.t2;}}>
@@ -2527,8 +2577,8 @@ function EmptyState({onPrompt}){
         <div style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:T.green,boxShadow:`0 0 12px ${T.green}`,border:`2px solid ${T.bg0}`}}/>
       </div>
       <div style={{textAlign:"center",maxWidth:460}}>
-        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",lineHeight:1.2}}>YouTube analytics, in plain English.</h2>
-        <p style={{margin:"0 0 6px",fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>Ask anything about your dataset — views, sentiment, monetization, regional performance, and more.</p>
+        <h2 style={{margin:"0 0 8px",fontSize:26,fontWeight:700,color:T.t0,fontFamily:"Playfair Display,serif",lineHeight:1.2}}>Your Data, in plain English.</h2>
+        <p style={{margin:"0 0 6px",fontSize:14,color:T.t1,lineHeight:1.7,fontFamily:"Instrument Sans,sans-serif"}}>Ask anything about your dataset.</p>
         <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,background:T.aBg,border:`1px solid ${T.a0}33`,marginTop:4}}>
           <div style={{width:5,height:5,borderRadius:"50%",background:T.green}}/>
           <span style={{fontSize:11,color:T.a1,fontFamily:"JetBrains Mono,monospace"}}>Dataset Connected · Analytics Engine Ready</span>
@@ -3433,7 +3483,11 @@ export default function DIDashboard(){
   const[showShare,setShowShare]=useState(false);
   const[showExport,setShowExport]=useState(false);
   const[toast,setToast]=useState(null);
-  const[user,setUser]=useState(null);
+  const [user,setUser]=useState(null);
+  const handleSignOut = () => {
+    setUser(null);
+    setShowLanding(true);
+  };
   const[showOnboarding,setShowOnboarding]=useState(false);
   const[demoMode,setDemoMode]=useState(false);
   const[showLanding,setShowLanding]=useState(true);
@@ -3525,7 +3579,7 @@ export default function DIDashboard(){
       const formData = new FormData();
       formData.append("file", f);
 
-      const res = await fetch("http://localhost:8000/upload_csv", {
+      const res = await fetch(`${BACKEND_BASE_URL}/upload_csv`, {
         method: "POST",
         body: formData
       });
@@ -3593,7 +3647,7 @@ export default function DIDashboard(){
 
     try {
 
-      const res = await fetch("http://localhost:8000/schema");
+      const res = await fetch(`${BACKEND_BASE_URL}/schema`);
       const data = await res.json();
       console.log("SCHEMA RESPONSE:", data);
       if (data.status === "success") {
@@ -3718,8 +3772,21 @@ export default function DIDashboard(){
 
       const data = await callAPI(msgs, chatMode);
 
-      if (data.error) {
-        setError(data.error);
+      if( (!data.charts || data.charts.length === 0) && (!data.kpis || data.kpis.length === 0)) {
+
+          const fallback = buildNoAnswerResult(
+            text,
+            data.summary || "No data available for this query."
+          );
+        ;
+        setError(null);
+        setResult(fallback);
+        setCharts([]);
+        setDashTitle(fallback.title);
+        setQHistory(prev => [
+          { q: text, mode: chatMode },
+          ...prev
+        ].slice(0, 15));
       } else {
 
         setResult(data);
@@ -3743,7 +3810,14 @@ export default function DIDashboard(){
       }
 
     } catch (e) {
-      setError(e.message || "Something went wrong.");
+      const fallback = buildNoAnswerResult(
+        text,
+        e.message || "I couldn't answer that request right now. Try rephrasing it with a metric, dimension, or date range."
+      );
+      setError(null);
+      setResult(fallback);
+      setCharts([]);
+      setDashTitle(fallback.title);
     }
 
     setLoading(false);
@@ -3780,16 +3854,16 @@ export default function DIDashboard(){
           
           <Sidebar activeTab={tab} onTab={setTab}
             qHistory={qHistory} onHistoryClick={q=>submit(q)}
-            saved={saved} onLoadSaved={handleLoadSaved} onDeleteSaved={handleDeleteSaved}
             schema={schema}
             alerts={alerts} onAddAlert={a=>setAlerts(p=>[...p,a])} onDeleteAlert={i=>setAlerts(p=>p.filter((_,j)=>j!==i))}
             schedule={schedule} onSaveSchedule={setSchedule}
             uploadedDatasets={uploadedDatasets} onLoadUploadedDataset={loadUploadedDataset}
+            onUploadCsv={openCSVPicker}
           />
         )}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
           {/* Topbar — with editable title, theme toggle, shortcuts button */}
-          <div style={{height:52,borderBottom:`1px solid ${T.b0}`,display:"flex",alignItems:"center",padding:"0 20px",gap:8,background:T.bg0,flexShrink:0}}>
+          <div style={{height:56,borderBottom:`1px solid ${T.b0}`,display:"flex",alignItems:"center",padding:"0 22px",gap:10,background:`linear-gradient(180deg,${T.bg0},${T.bg1})`,flexShrink:0,boxShadow:`inset 0 -1px 0 ${T.b0}`}}>
             <button onClick={()=>setSidebar(s=>!s)} style={{all:"unset",cursor:"pointer",width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",color:T.t2,transition:"all .12s"}}
               onMouseEnter={e=>{e.currentTarget.style.background=T.bg3;e.currentTarget.style.color=T.t0;}}
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.t2;}}>
@@ -3801,7 +3875,7 @@ export default function DIDashboard(){
             {result&&<DateRangePicker value={dateRange} onChange={setDateRange}/>}
             {/* Ctrl+K button */}
             <button onClick={()=>setShowCmdPalette(true)} title="Command palette (Ctrl+K)"
-              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:8,background:T.aBg,border:`1px solid ${T.a0}33`,fontSize:12,color:T.a1,fontFamily:"JetBrains Mono,monospace",transition:"all .12s"}}
+              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:10,background:T.aBg,border:`1px solid ${T.a0}33`,fontSize:12,color:T.a1,fontFamily:"JetBrains Mono,monospace",transition:"all .12s",boxShadow:`inset 0 1px 0 rgba(255,255,255,.04)`}}
               onMouseEnter={e=>{e.currentTarget.style.background=T.aBg2;e.currentTarget.style.borderColor=T.a0+"55";}}
               onMouseLeave={e=>{e.currentTarget.style.background=T.aBg;e.currentTarget.style.borderColor=T.a0+"33";}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -3809,7 +3883,7 @@ export default function DIDashboard(){
             </button>
             {/* Shortcuts button */}
             <button onClick={()=>setShowShortcuts(true)} title="Keyboard shortcuts (Ctrl+/)"
-              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:8,background:T.bg2,border:`1px solid ${T.b1}`,fontSize:12,color:T.t1,fontFamily:"JetBrains Mono,monospace",transition:"all .12s"}}
+              style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:10,background:T.bg2,border:`1px solid ${T.b1}`,fontSize:12,color:T.t1,fontFamily:"JetBrains Mono,monospace",transition:"all .12s",boxShadow:`inset 0 1px 0 rgba(255,255,255,.03)`}}
               onMouseEnter={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.color=T.t0;}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b1;e.currentTarget.style.color=T.t1;}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg>
@@ -3830,12 +3904,6 @@ export default function DIDashboard(){
             </div>
             {/* Theme toggle */}
             <input type="file" accept=".csv,text/csv" ref={fileInputRef} onChange={handleCSVUpload} style={{display:"none"}} />
-            <button onClick={openCSVPicker} title="Upload CSV" style={{all:"unset",cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:"5px 11px",borderRadius:8,background:T.bg2,border:`1px solid ${T.b1}`,fontSize:12,color:T.t1,fontFamily:"Instrument Sans,sans-serif",transition:"all .12s"}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.color=T.t0;}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor=T.b1;e.currentTarget.style.color=T.t1;}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M12 21v-8"/></svg>
-              Upload CSV
-            </button>
             <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Switch to light mode":"Switch to dark mode"}
               style={{all:"unset",cursor:"pointer",width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",color:T.t2,background:T.bg2,border:`1px solid ${T.b1}`,transition:"all .12s"}}
               onMouseEnter={e=>{e.currentTarget.style.borderColor=T.b2;e.currentTarget.style.color=T.t0;}}
@@ -3921,6 +3989,24 @@ export default function DIDashboard(){
               {result&&!loading&&(
                 <div style={{display:"flex",flexDirection:"column",gap:14}}>
                   <SummaryBanner title={dashTitle||result.title} summary={result.summary}/>
+                  {result.unanswerable&&(
+                    <div style={{display:"flex",gap:12,padding:"14px 16px",borderRadius:14,background:T.bg2,border:`1px solid ${T.a0}33`,alignItems:"flex-start"}}>
+                      <div style={{width:30,height:30,borderRadius:10,background:T.aBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.a0} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        <p style={{margin:0,fontSize:13,color:T.t0,fontFamily:"Instrument Sans,sans-serif",fontWeight:600}}>Try a more specific analytics prompt</p>
+                        <p style={{margin:0,fontSize:12,color:T.t1,lineHeight:1.6,fontFamily:"Instrument Sans,sans-serif"}}>
+                          Mention a metric like views, revenue, or engagement, plus a dimension such as category, region, language, or date range.
+                        </p>
+                        {result.originalQuery&&(
+                          <p style={{margin:0,fontSize:11,color:T.t2,fontFamily:"JetBrains Mono,monospace"}}>
+                            Last query: {result.originalQuery}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {uploadedData&&(
                     <div style={{padding:"12px",borderRadius:12,background:T.bg2,border:`1px solid ${T.b1}`}}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>

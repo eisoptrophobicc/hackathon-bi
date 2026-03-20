@@ -1,14 +1,12 @@
 import json
-import os
 from dotenv import load_dotenv
-from google import genai
+from genai_client import get_genai_client
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 
 def generate_insight(intent, data):
+    client = get_genai_client()
 
     if not data:
         return None

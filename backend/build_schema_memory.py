@@ -1,10 +1,9 @@
 import json
-import os
 import sqlite3
 from pathlib import Path
 from dotenv import load_dotenv
-from google import genai
 from schema_loader import get_columns
+from genai_client import get_genai_client
 
 load_dotenv()
 
@@ -12,8 +11,6 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 DB_FILE = BASE_DIR / "backend" / "youtube_content.db"
 TABLE = "youtube_videos_staging"
 SCHEMA_PATH = BASE_DIR / "backend" / "schema_memory.json"
-
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def get_column_types(db_path, table):
 
@@ -51,6 +48,7 @@ def get_examples(db_path, table, columns):
     return examples
 
 def classify_schema_llm(columns, column_types, examples):
+    client = get_genai_client()
 
     schema_info = []
 

@@ -1,133 +1,180 @@
 {
   "table": "youtube_videos_staging",
   "columns": {
-    "timestamp": {
-      "type": "TEXT",
-      "role": "datetime",
-      "examples": [
-        "2024-09-14 05:08:02",
-        "2025-08-09 12:23:26",
-        "2024-03-04 14:39:48",
-        "2025-05-04 11:05:26",
-        "2024-09-22 20:22:31"
-      ]
-    },
-    "video_id": {
+    "product_id": {
       "type": "TEXT",
       "role": "id",
       "examples": [
-        "VID_589765",
-        "VID_577279",
-        "VID_890301",
-        "VID_613444",
-        "VID_602671"
+        "B07JW9H4J1",
+        "B098NS6PVG",
+        "B096MSW6CT",
+        "B08HDJ86NZ",
+        "B08CF3B7N1"
+      ]
+    },
+    "product_name": {
+      "type": "TEXT",
+      "role": "text",
+      "examples": [
+        "Wayona Nylon Braided USB to Lightning Fast Charging and Data Sync Cable Compatible for iPhone 13, 12,11, X, 8, 7, 6, 5, iPad Air, Pro, Mini (3 FT Pack of 1, Grey)",
+        "Ambrane Unbreakable 60W / 3A Fast Charging 1.5m Braided Type C Cable for Smartphones, Tablets, Laptops & other Type C devices, PD Technology, 480Mbps Data Sync, Quick Charge 3.0 (RCT15A, Black)",
+        "Sounce Fast Phone Charging Cable & Data Sync USB Cable Compatible for iPhone 13, 12,11, X, 8, 7, 6, 5, iPad Air, Pro, Mini & iOS Devices",
+        "boAt Deuce USB 300 2 in 1 Type-C & Micro USB Stress Resistant, Tangle-Free, Sturdy Cable with 3A Fast Charging & 480mbps Data Transmission, 10000+ Bends Lifespan and Extended 1.5m Length(Martian Red)",
+        "Portronics Konnect L 1.2M Fast Charging 3A 8 Pin USB Cable with Charge & Sync Function for iPhone, iPad (Grey)"
       ]
     },
     "category": {
       "type": "TEXT",
       "role": "dimension",
       "examples": [
-        "Vlogs",
-        "Tech Reviews",
-        "Gaming",
-        "Education",
-        "Music"
+        "Computers&Accessories|Accessories&Peripherals|Cables&Accessories|Cables|USBCables",
+        "Computers&Accessories|NetworkingDevices|NetworkAdapters|WirelessUSBAdapters",
+        "Electronics|HomeTheater,TV&Video|Accessories|Cables|HDMICables",
+        "Electronics|HomeTheater,TV&Video|Televisions|SmartTelevisions",
+        "Electronics|HomeTheater,TV&Video|Accessories|RemoteControls"
       ]
     },
-    "language": {
+    "discounted_price": {
+      "type": "TEXT",
+      "role": "metric",
+      "examples": [
+        "\u20b9399",
+        "\u20b9199",
+        "\u20b9329",
+        "\u20b9154",
+        "\u20b9149"
+      ]
+    },
+    "actual_price": {
+      "type": "TEXT",
+      "role": "metric",
+      "examples": [
+        "\u20b91,099",
+        "\u20b9349",
+        "\u20b91,899",
+        "\u20b9699",
+        "\u20b9399"
+      ]
+    },
+    "discount_percentage": {
+      "type": "TEXT",
+      "role": "metric",
+      "examples": [
+        "64%",
+        "43%",
+        "90%",
+        "53%",
+        "61%"
+      ]
+    },
+    "rating": {
+      "type": "TEXT",
+      "role": "metric",
+      "examples": [
+        "4.2",
+        "4.0",
+        "3.9",
+        "4.1",
+        "4.3"
+      ]
+    },
+    "rating_count": {
+      "type": "TEXT",
+      "role": "metric",
+      "examples": [
+        "24,269",
+        "43,994",
+        "7,928",
+        "94,363",
+        "16,905"
+      ]
+    },
+    "about_product": {
+      "type": "TEXT",
+      "role": "text",
+      "examples": [
+        "High Compatibility : Compatible With iPhone 12, 11, X/XsMax/Xr ,iPhone 8/8 Plus,iPhone 7/7 Plus,iPhone 6s/6s Plus,iPhone 6/6 Plus,iPhone 5/5s/5c/se,iPad Pro,iPad Air 1/2,iPad mini 1/2/3,iPod nano7,iPod touch and more apple devices.|Fast Charge&Data Sync : It can charge and sync simultaneously at a rapid speed, Compatible with any charging adaptor, multi-port charging station or power bank.|Durability : Durable nylon braided design with premium aluminum housing and toughened nylon fiber wound tightly around the cord lending it superior durability and adding a bit to its flexibility.|High Security Level : It is designed to fully protect your device from damaging excessive current.Copper core thick+Multilayer shielding, Anti-interference, Protective circuit equipment.|WARRANTY: 12 months warranty and friendly customer services, ensures the long-time enjoyment of your purchase. If you meet any question or problem, please don't hesitate to contact us.",
+        "Compatible with all Type C enabled devices, be it an android smartphone (Mi, Samsung, Oppo, Vivo, Realme, OnePlus, etc), tablet, laptop (Macbook, Chromebook, etc)|Supports Quick Charging (2.0/3.0)|Unbreakable \u2013 Made of special braided outer with rugged interior bindings, it is ultra-durable cable that won\u2019t be affected by daily rough usage|Ideal Length \u2013 It has ideal length of 1.5 meters which is neither too short like your typical 1meter cable or too long like a 2meters cable|Supports maximum 3A fast charging and 480 Mbps data transfer speed|6 months manufacturer warranty from the date of purchase",
+        "\u3010 Fast Charger& Data Sync\u3011-With built-in safety proctections and four-core copper wires promote maximum signal quality and strength and enhance charging & data transfer speed with up to 480 mb/s transferring speed.|\u3010 Compatibility\u3011-Compatible with iPhone 13, 12,11, X, 8, 7, 6, 5, iPad Air, Pro, Mini & iOS devices.|\u3010 Sturdy & Durable\u3011-The jacket and enforced connector made of TPE and premium copper, are resistant to repeatedly bending and coiling.|\u3010 Ultra High Quality\u3011: According to the experimental results, the fishbone design can accept at least 20,000 bending and insertion tests for extra protection and durability. Upgraded 3D aluminum connector and exclusive laser welding technology, which to ensure the metal part won't break and also have a tighter connection which fits well even with a protective case on and will never loose connection.|\u3010 Good After Sales Service\u3011-Our friendly and reliable customer service will respond to you within 24 hours ! you can purchase with confidence,and every sale includes a 365-day worry-free Service to prove the importance we set on quality.",
+        "The boAt Deuce USB 300 2 in 1 cable is compatible with smartphones, tablets, PC peripherals, Bluetooth speakers, power banks and all other devices with Type-C as well as Micro USB port|It ensures 3A fast charging and data transmissions with rapid sync at 480 mbps|The premium Nylon braided skin makes it sturdy and invincible against external damage|Its Aluminium alloy shell housing makes it last longer with 10000+ Bends Lifespan with extended frame protection for strain relief|The resilient and flexible design offers a tangle free experience seamlessly|Deuce USB 300 cable offers a perfect 1.5 meters in length for smooth & hassle-free user experience|2 years warranty from the date of purchase",
+        "[CHARGE & SYNC FUNCTION]- This cable comes with charging & Data sync function|[HIGH QUALITY MATERIAL]- TPE + Nylon Material to make sure that the life of the cable is enhanced significantly|[LONG CORD]- The Cable is extra thick 1.2 meter long, optimized for an easy use for your comfort at home or office|[MORE DURABLE]-This cable is unique interms of design and multi-use and is positioned to provide the best comfort and performance while using|[UNIVERSAL COMPATIBILITY]- Compatible with all devices like iPhone XS, X, XR, 8, 7, 6S, 6, 5S, iPad Pro, iPad mini and iPad Air"
+      ]
+    },
+    "user_id": {
+      "type": "TEXT",
+      "role": "id",
+      "examples": [
+        "AG3D6O4STAQKAY2UVGEUV46KN35Q,AHMY5CWJMMK5BJRBBSNLYT3ONILA,AHCTC6ULH4XB6YHDY6PCH2R772LQ,AGYHHIERNXKA6P5T7CZLXKVPT7IQ,AG4OGOFWXJZTQ2HKYIOCOY3KXF2Q,AENGU523SXMOS7JPDTW52PNNVWGQ,AEQJHCVTNINBS4FKTBGQRQTGTE5Q,AFC3FFC5PKFF5PMA52S3VCHOZ5FQ",
+        "AECPFYFQVRUWC3KGNLJIOREFP5LQ,AGYYVPDD7YG7FYNBXNGXZJT525AQ,AHONIZU3ICIEHQIGQ6R2VFRSBXOQ,AFPHD2CRPDZMWMBL7WXRSVYWS5JA,AEZ346GX3HJ4O4XNRPHCNHXQURMQ,AEPSWFPNECKO34PUC7I56ITGXR6Q,AHWVEHR5DYLVFTO2KF3IZATFQSWQ,AH4QT33M55677I7ISQOAKEQWACYQ",
+        "AGU3BBQ2V2DDAMOAKGFAWDDQ6QHA,AESFLDV2PT363T2AQLWQOWZ4N3OA,AHTPQRIMGUD4BYR5YIHBH3CCGEFQ,AEUVWXYP5LT7PZLLZENEO2NODPBQ,AHC7MPW55DOO6WNCOQVA2VHOD26A,AFDI6FRPFBTNBG7BAEB7JDJSMKDQ,AFQKCEEEKXCOHTDG4WUN3XPPHJQQ,AHKUUFNMBZIDLSSPA4FEHIO2EC7Q",
+        "AEWAZDZZJLQUYVOVGBEUKSLXHQ5A,AG5HTSFRRE6NL3M5SGCUQBP7YSCA,AH725ST5NW2Y4JZPKUNTIJCUK2BA,AHV3TXIFCJPMS4D5JATCEUR266MQ,AGWIGDEMFIIUAOXYY2QATNBSUGHA,AFSTSLQUV4EVEXWKBOLEFHL2H5YQ,AGAKDNBHY2FKX7I4ACRGILU7QL7A,AFNWJUWJRHCC6HN52KMG5AKZY37Q",
+        "AE3Q6KSUK5P75D5HFYHCRAOLODSA,AFUGIFH5ZAFXRDSZHM4QB2KPKFUQ,AFK4NJOLFSJGWLOJIUIAROJF6YVA,AFUOTYRFUXVPEBGIXVZZ7DR3CZUA,AFDLRSXKDZ6U3U3KD46SQLFGZQRA,AH5VLM66SIK7J3IRG4NY7XVOQ55A,AE3MQNNHHLUHXURL5S7IAR7JTGNQ,AFSEOFZY67MYC7UAJU264Z5NFTLA"
+      ]
+    },
+    "user_name": {
       "type": "TEXT",
       "role": "dimension",
       "examples": [
-        "Japanese",
-        "Urdu",
-        "English",
-        "Spanish",
-        "Hindi"
+        "Manav,Adarsh gupta,Sundeep,S.Sayeed Ahmed,jaspreet singh,Khaja moin,Anand,S.ARUMUGAM",
+        "ArdKn,Nirbhay kumar,Sagar Viswanathan,Asp,Placeholder,BharanI,sonia,Niam",
+        "Kunal,Himanshu,viswanath,sai niharka,saqib malik,Aashiq,Ramu Challa,Sanjay gupta",
+        "Omkar dhale,JD,HEMALATHA,Ajwadh a.,amar singh chouhan,Ravi Siddan,Himanshu Goel,Udaykumar",
+        "rahuls6099,Swasat Borah,Ajay Wadke,Pranali,RVK,Bhargav,Durai Vignesh,Amazon Customer"
       ]
     },
-    "region": {
+    "review_id": {
       "type": "TEXT",
-      "role": "dimension",
+      "role": "id",
       "examples": [
-        "PK",
-        "UK",
-        "BR",
-        "IN",
-        "US"
+        "R3HXWT0LRP0NMF,R2AJM3LFTLZHFO,R6AQJGUP6P86,R1KD19VHEDV0OR,R3C02RMYQMK6FC,R39GQRVBUZBWGY,R2K9EDOE15QIRJ,R3OI7YT648TL8I",
+        "RGIQEG07R9HS2,R1SMWZQ86XIN8U,R2J3Y1WL29GWDE,RYGGS0M09S3KY,R17KQRUTAN5DKS,R3AAQGS6HP2QUK,R1HDNOG6TO2CCA,R3PHKXYA5AFEOU",
+        "R3J3EQQ9TZI5ZJ,R3E7WBGK7ID0KV,RWU79XKQ6I1QF,R25X4TBMPY91LX,R27OK7G99VK0TR,R207CYDCHJJTCJ,R3PCU8XMU173BT,R1IMONDOWRNU5V",
+        "R3EEUZKKK9J36I,R3HJVYCLYOY554,REDECAZ7AMPQC,R1CLH2ULIVG5U3,R2DMKIBGFKBD6R,RC89B5IAJUTR5,R3B3DDON5FH8DS,R13WAEJDI5RS36",
+        "R1BP4L2HH9TFUP,R16PVJEXKV6QZS,R2UPDB81N66T4P,R3KK4GT934ST3I,RCFHMWUSBIJO,RDO7DACXMAJ84,R3A6MEZL3LY66Z,R1ESIEKPGAYA29"
       ]
     },
-    "duration_sec": {
-      "type": "INTEGER",
-      "role": "metric",
+    "review_title": {
+      "type": "TEXT",
+      "role": "text",
       "examples": [
-        873,
-        2335,
-        1895,
-        841,
-        1246
+        "Satisfied,Charging is really fast,Value for money,Product review,Good quality,Good product,Good Product,As of now seems good",
+        "A Good Braided Cable for Your Type C Device,Good quality product from ambrane,Super cable,As,Good quality,Good product,its good,Good quality for the price but one issue with my unit",
+        "Good speed for earlier versions,Good Product,Working good,Good for the price,Good,Worth for money,Working nice,it's a really nice product",
+        "Good product,Good one,Nice,Really nice product,Very first time change,Good,Fine product but could be better,Very nice it's charging like jet",
+        "As good as original,Decent,Good one for secondary use,Best quality,GOOD,Amazing product at a mind blowing price!,Nice Quality,Good product"
       ]
     },
-    "views": {
-      "type": "INTEGER",
-      "role": "metric",
+    "review_content": {
+      "type": "TEXT",
+      "role": "text",
       "examples": [
-        6826,
-        11371,
-        7509,
-        17361,
-        18494
+        "Looks durable Charging is fine tooNo complains,Charging is really fast, good product.,Till now satisfied with the quality.,This is a good product . The charging speed is slower than the original iPhone cable,Good quality, would recommend,https://m.media-amazon.com/images/W/WEBP_402378-T1/images/I/81---F1ZgHL._SY88.jpg,Product had worked well till date and was having no issue.Cable is also sturdy enough...Have asked for replacement and company is doing the same...,Value for money",
+        "I ordered this cable to connect my phone to Android Auto of car. The cable is really strong and the connection ports are really well made. I already has a Micro USB cable from Ambrane and it's still in good shape. I connected my phone to the car using the cable and it got connected well and no issues. I also connected it to the charging port and yes it has Fast Charging support.,It quality is good at this price and the main thing is that i didn't ever thought that this cable will be so long it's good one and charging power is too good and also supports fast charging,Value for money, with extra length\ud83d\udc4d,Good, working fine,Product quality is good,Good,very good,Bought for my daughter's old phone.Brand new cable it was not charging, I already repacked and requested for replacement.I checked again, and there was some green colour paste/fungus inside the micro USB connector. I cleaned with an alcoholic and starts working again.Checked the ampere of charging speed got around 1400ma-1500ma - not bad, came with braided 1.5m long cable, pretty impressive for the price.Can't blame the manufacturer.But quality issues by the distributor, they might have stored in very humid place.",
+        "Not quite durable and sturdy,https://m.media-amazon.com/images/W/WEBP_402378-T1/images/I/71rIggrbUCL._SY88.jpg,Working good,https://m.media-amazon.com/images/W/WEBP_402378-T1/images/I/61bKp9YO6wL._SY88.jpg,Product,Very nice product,Working well,It's a really nice product",
+        "Good product,long wire,Charges good,Nice,I bought this cable for Rs.339 worthy product for this price, i tested it in various charger adapters 33w and 18w it supports fast charging as well.,Good,Ok,I had got this at good price on sale on Amazon and product is useful with warranty but for warranty you need to go very far not practical for such a cost and mine micro to type c connector stopped working after few days only.,I like this product",
+        "Bought this instead of original apple, does the work for 150rs, not as fast as apple charger but its a good option if you want cheap and good product, bought it for iPad pro 10.5 and it's working flawlessly, build quality is ok, its not like i am gonna hang my clothes on it and i want a very strong cable, even a braided cable stop working after a year, i have used both Anker and Apple store strong braided cable they all stop working after a year so please don't buy high end cables just for that instead choose a this one and even if it's stops working withing a year you only loose 150rs compares to 2000rs.UPDATE------------------------------------pin has stopped charging from one side, now i have to slip the pin to charge from other side, but i will update and let know for how long does it work,,It\u2019s good. Not sure about durability as the pin area feels a bit fragile,Does not support apple carplaySo was little disappointed about thatOther than that cable is made up of very good quality,Best to buy,100% NOT FATHFUL,Writing this review post 10 months and 3 orders of the same product.Honestly Portronics Konnect L lightning cable works like magic with the original Apple charging brick.Seeing the price of the cable I initially hesitated buying as it was as low as \u20b999/- with the offers and so I wasn\u2019t sure if it would work well with my iPhone 12 or whether it would impact my iPhone\u2019s battery health because all the other lightning cable brands were costing over \u20b9350/- like Wayona, Amazon Basics, etc.Earlier I was using Wayona Brand lightning cable with eventually frayed and stopped working.Charging Speed:Charges my iPhone fast enough almost similar compared to the original cable level when used with 12W Original Apple power adapter.Quality and Durability:Great quality braided cable and doesn\u2019t tangle easily and can withstand day-to-day usage.L-Shaped pin:This is very innovative by Portronics and it makes sure the cable doesn\u2019t get damaged even if used while charging.CarPlay and Data Sync:Works smoothly with CarPlay and syncs data effortlessly.PS: I have used this cable only with the Original Apple Charging Brick and extremely satisfied with its performance.,Better than I expect the product I like that Quality and I plan to buy same type cable come with usb C to Lighting cable for emergency purpose that much I love this cable. Buy for this cable only emergency uses only since Good one,Good product and value for money"
       ]
     },
-    "likes": {
-      "type": "INTEGER",
-      "role": "metric",
+    "img_link": {
+      "type": "TEXT",
+      "role": "text",
       "examples": [
-        396,
-        402,
-        730,
-        1302,
-        756
+        "https://m.media-amazon.com/images/W/WEBP_402378-T1/images/I/51UsScvHQNL._SX300_SY300_QL70_FMwebp_.jpg",
+        "https://m.media-amazon.com/images/W/WEBP_402378-T2/images/I/31zOsqQOAOL._SY445_SX342_QL70_FMwebp_.jpg",
+        "https://m.media-amazon.com/images/W/WEBP_402378-T1/images/I/31IvNJZnmdL._SY445_SX342_QL70_FMwebp_.jpg",
+        "https://m.media-amazon.com/images/I/41V5FtEWPkL._SX300_SY300_QL70_FMwebp_.jpg",
+        "https://m.media-amazon.com/images/W/WEBP_402378-T2/images/I/31VzNhhqifL._SX300_SY300_QL70_FMwebp_.jpg"
       ]
     },
-    "comments": {
-      "type": "INTEGER",
-      "role": "metric",
+    "product_link": {
+      "type": "TEXT",
+      "role": "text",
       "examples": [
-        34,
-        26,
-        45,
-        122,
-        63
-      ]
-    },
-    "shares": {
-      "type": "INTEGER",
-      "role": "metric",
-      "examples": [
-        31,
-        19,
-        25,
-        42,
-        14
-      ]
-    },
-    "sentiment_score": {
-      "type": "REAL",
-      "role": "metric",
-      "examples": [
-        -0.082,
-        -0.873,
-        -0.764,
-        -0.788,
-        0.521
-      ]
-    },
-    "ads_enabled": {
-      "type": "INTEGER",
-      "role": "dimension",
-      "examples": [
-        1,
-        0
+        "https://www.amazon.in/Wayona-Braided-WN3LG1-Syncing-Charging/dp/B07JW9H4J1/ref=sr_1_1?qid=1672909124&s=electronics&sr=1-1",
+        "https://www.amazon.in/Ambrane-Unbreakable-Charging-Braided-Cable/dp/B098NS6PVG/ref=sr_1_2?qid=1672909124&s=electronics&sr=1-2",
+        "https://www.amazon.in/Sounce-iPhone-Charging-Compatible-Devices/dp/B096MSW6CT/ref=sr_1_3?qid=1672909124&s=electronics&sr=1-3",
+        "https://www.amazon.in/Deuce-300-Resistant-Tangle-Free-Transmission/dp/B08HDJ86NZ/ref=sr_1_4?qid=1672909124&s=electronics&sr=1-4",
+        "https://www.amazon.in/Portronics-Konnect-POR-1080-Charging-Function/dp/B08CF3B7N1/ref=sr_1_5?qid=1672909124&s=electronics&sr=1-5"
       ]
     }
   }

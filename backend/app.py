@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 
+
 from setup_db import load_dataframe, ingest_dataframe
 from build_schema_memory import build_schema
 
@@ -22,7 +23,7 @@ auth.create_users_table()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,10 +51,17 @@ def query(req: QueryRequest):
 
     result = run_query(req.question, req.mode)
 
-    # If error occurs just return it
-    if result["status"] != "success":
-        return result
+    # 🔴 HANDLE ERROR PROPERLY
+    if result.get("status") != "success":
+        return {
+            "title": req.question,
+            "summary": result.get("reason", {}).get("reason", "Couldn't process this query."),
+            "sql": None,
+            "kpis": [],
+            "charts": []
+        }
 
+    # ✅ NORMAL FLOW
     return adapt_result(result, req.question)
 
 @app.post("/register")
@@ -76,10 +84,14 @@ def login(req: LoginRequest):
     if not bcrypt.verify(req.password, stored_hash):
         return {"status": "error", "message": "invalid password"}
 
+    auth.update_last_login(user[0])
+
+
     return {
-        "status": "success",
-        "message": "login successful",
-        "email": user[1]
+    "status": "success",
+    "message": "login successful",
+    "email": user[1],
+    "token_type": "bearer"
     }
 
 @app.post("/upload_csv")

@@ -35,23 +35,49 @@ def detect_encoding(filepath):
 # Extract CSV content from the file
 # Handles HTML <pre>, garbage before CSV, or normal CSV
 def extract_csv_text(filepath):
-
+    
     encoding = detect_encoding(filepath)
 
     with open(filepath, "r", encoding=encoding, errors="ignore") as f:
         content = f.read()
 
-    # Case 1: HTML export containing <pre>
+    # ✅ 1. If HTML <pre> exists → clean it
     match = re.search(r"<pre[^>]*>(.*?)</pre>", content, re.DOTALL)
-
     if match:
         debug("CSV extracted from HTML <pre>")
         return match.group(1)
 
-    # Case 2: Garbage before CSV
-    debug("No <pre> block detected, locating CSV start")
-
+    # ✅ 2. NEW: Check if file already looks like a valid CSV
     lines = content.splitlines()
+
+    if len(lines) > 3:
+        first_cols = len(lines[0].split(","))
+        second_cols = len(lines[1].split(","))
+        third_cols = len(lines[2].split(","))
+
+        # If first 3 rows are consistent → assume clean CSV
+        if first_cols > 3 and first_cols == second_cols == third_cols:
+            debug("Clean CSV detected → skipping extraction logic")
+            return content
+        
+        # ✅ Try parsing as-is FIRST (header-safe check)
+    try:
+        test_df = pd.read_csv(
+            io.StringIO(content),
+            engine="python",
+            nrows=5
+        )
+
+        # If pandas reads columns properly → it's already clean
+        if len(test_df.columns) > 1:
+            debug("Valid CSV detected → skipping cleanup")
+            return content
+
+    except Exception:
+        pass
+
+    # ⚠️ 3. FALLBACK: your existing detection logic
+    debug("No clean structure detected, using fallback extraction")
 
     for i, line in enumerate(lines):
 

@@ -70,5 +70,18 @@
       "group_by": "{dimension}"
     },
     "sql_template": "SELECT {dimension}, SUM({metric}) AS sum_{metric} FROM youtube_videos_staging GROUP BY {dimension}"
+  },
+  {
+    "intent_pattern": {
+      "aggregation": "AVG",
+      "metric": "{metric}",
+      "filters": {
+        "category": "{category}"
+      },
+      "group_by": null,
+      "order_by": "{metric}",
+      "order": "DESC"
+    },
+    "sql_template": "SELECT AVG({metric}) AS avg_{metric} FROM youtube_videos_staging WHERE category IN ('Education') ORDER BY AVG({metric}) DESC"
   }
 ]
