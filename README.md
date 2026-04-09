@@ -8,7 +8,9 @@ Built during a hackathon — Top 2 project
 
 ## Overview
 
-This system processes datasets and allows querying using plain English.
+This system processes user-uploaded datasets and allows querying using plain English.
+
+It is designed to be dataset-agnostic, dynamically adapting to different data structures without requiring predefined schemas.
 
 It dynamically:
 - Interprets intent using LLMs
@@ -21,10 +23,11 @@ It dynamically:
 ## Key Features
 
 - Natural language → SQL query conversion  
-- Dataset processing (CSV → SQLite)  
+- Automatic dataset ingestion (CSV → SQLite)  
+- Dataset-agnostic querying (works across arbitrary datasets)  
 - Modular backend design for flexible query handling  
+- LLM-assisted data retrieval pipeline  
 - Support for dynamic analytical queries  
-- Designed for extensibility across different datasets  
 
 ---
 
@@ -55,25 +58,15 @@ Install dependencies
 
 ---
 
-## Dataset Setup
+## Usage
 
-The dataset is not stored in the repository.
+Simply upload a dataset (CSV), and the system will automatically:
 
-    python download_data.py
+- Process and clean the data  
+- Convert it into a database  
+- Enable natural language querying  
 
-This downloads youtube_content.csv.
-
----
-
-## Database Setup
-
-    python setup_db.py
-
-Creates youtube_content.db.
-
----
-
-## Run
+Run:
 
     python run_query.py
 
@@ -87,5 +80,7 @@ Example queries:
 
 ## Notes
 
-- .csv and .db files are excluded from version control  
+- CSV data is automatically processed and stored internally  
+- Database setup is handled dynamically  
+- Dataset-agnostic design enables reuse across different datasets  
 - Developed as a hackathon prototype  
